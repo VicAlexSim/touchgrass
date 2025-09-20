@@ -3,40 +3,46 @@ import { action, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 
-// Process webcam frame with Twelvelabs
+// Process webcam frame with face-api.js real analysis
 export const processWebcamFrame = action({
   args: {
     imageData: v.string(), // base64 encoded image
+    mood: v.string(), // detected mood from face-api.js
+    moodScore: v.number(), // mood score from face-api.js
+    isPresent: v.boolean(), // face detected
+    confidence: v.number(), // detection confidence
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.subject;
 
-    // This would integrate with Twelvelabs API
-    // For now, we'll simulate the mood detection
-    const mockMoodAnalysis = {
-      mood: ["happy", "neutral", "stressed", "tired"][Math.floor(Math.random() * 4)],
-      moodScore: Math.floor(Math.random() * 100),
-      isPresent: Math.random() > 0.2, // 80% chance of being present
-      confidence: 0.8 + Math.random() * 0.2,
+    // Use real analysis data from face-api.js
+    const moodAnalysis = {
+      mood: args.mood,
+      moodScore: args.moodScore,
+      isPresent: args.isPresent,
+      confidence: args.confidence,
     };
 
-    // Store mood data
-    await ctx.runMutation(internal.webcam.storeMoodData, {
-      userId,
-      timestamp: Date.now(),
-      ...mockMoodAnalysis,
-    });
+    // Only store data if confidence is above threshold
+    if (moodAnalysis.confidence > 0.5) {
+      // Store mood data
+      await ctx.runMutation(internal.webcam.storeMoodData, {
+        userId,
+        timestamp: Date.now(),
+        ...moodAnalysis,
+      });
 
-    // Update or create work session
-    await ctx.runMutation(internal.webcam.updateWorkSession, {
-      userId,
-      isPresent: mockMoodAnalysis.isPresent,
-      moodScore: mockMoodAnalysis.moodScore,
-    });
+      // Update or create work session
+      await ctx.runMutation(internal.webcam.updateWorkSession, {
+        userId,
+        isPresent: moodAnalysis.isPresent,
+        moodScore: moodAnalysis.moodScore,
+      });
+    }
 
-    return mockMoodAnalysis;
+    return moodAnalysis;
   },
 });
 

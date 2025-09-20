@@ -29,6 +29,7 @@ export default function App() {
 
 function Content() {
   const { user, isLoading } = useAuth0();
+  console.log(user);
 
   if (isLoading) {
     return (
