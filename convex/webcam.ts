@@ -1,0 +1,201 @@
+import { v } from "convex/values";
+import { action, mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
+import { internalMutation } from "./_generated/server";
+
+// Process webcam frame with Twelvelabs
+export const processWebcamFrame = action({
+  args: {
+    imageData: v.string(), // base64 encoded image
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // This would integrate with Twelvelabs API
+    // For now, we'll simulate the mood detection
+    const mockMoodAnalysis = {
+      mood: ["happy", "neutral", "stressed", "tired"][Math.floor(Math.random() * 4)],
+      moodScore: Math.floor(Math.random() * 100),
+      isPresent: Math.random() > 0.2, // 80% chance of being present
+      confidence: 0.8 + Math.random() * 0.2,
+    };
+
+    // Store mood data
+    await ctx.runMutation(internal.webcam.storeMoodData, {
+      userId,
+      timestamp: Date.now(),
+      ...mockMoodAnalysis,
+    });
+
+    // Update or create work session
+    await ctx.runMutation(internal.webcam.updateWorkSession, {
+      userId,
+      isPresent: mockMoodAnalysis.isPresent,
+      moodScore: mockMoodAnalysis.moodScore,
+    });
+
+    return mockMoodAnalysis;
+  },
+});
+
+export const storeMoodData = internalMutation({
+  args: {
+    userId: v.id("users"),
+    timestamp: v.number(),
+    mood: v.string(),
+    moodScore: v.number(),
+    isPresent: v.boolean(),
+    confidence: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("moodData", args);
+  },
+});
+
+export const updateWorkSession = internalMutation({
+  args: {
+    userId: v.id("users"),
+    isPresent: v.boolean(),
+    moodScore: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+
+    // Get current active session
+    const activeSession = await ctx.db
+      .query("workSessions")
+      .withIndex("by_user_and_date", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("endTime"), undefined))
+      .first();
+
+    if (args.isPresent) {
+      if (!activeSession) {
+        // Start new session
+        await ctx.db.insert("workSessions", {
+          userId: args.userId,
+          startTime: now,
+          averageMood: args.moodScore,
+          breaksTaken: 0,
+        });
+      } else {
+        // Update existing session
+        const sessionMoods = await ctx.db
+          .query("moodData")
+          .withIndex("by_user_and_time", (q) => 
+            q.eq("userId", args.userId).gte("timestamp", activeSession.startTime)
+          )
+          .collect();
+
+        const avgMood = sessionMoods.length > 0
+          ? sessionMoods.reduce((sum, m) => sum + m.moodScore, 0) / sessionMoods.length
+          : args.moodScore;
+
+        await ctx.db.patch(activeSession._id, {
+          averageMood: avgMood,
+        });
+      }
+    } else {
+      if (activeSession) {
+        // End current session
+        const duration = Math.floor((now - activeSession.startTime) / (60 * 1000)); // minutes
+        await ctx.db.patch(activeSession._id, {
+          endTime: now,
+          duration,
+        });
+      }
+    }
+  },
+});
+
+// Get mood analytics
+export const getMoodAnalytics = query({
+  args: {
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const days = args.days || 7;
+    const since = Date.now() - (days * 24 * 60 * 60 * 1000);
+
+    const moodData = await ctx.db
+      .query("moodData")
+      .withIndex("by_user_and_time", (q) => 
+        q.eq("userId", userId).gte("timestamp", since)
+      )
+      .collect();
+
+    // Group by day
+    const dailyMood = new Map<string, { total: number; count: number }>();
+    
+    moodData.forEach(mood => {
+      const day = new Date(mood.timestamp).toISOString().slice(0, 10);
+      const current = dailyMood.get(day) || { total: 0, count: 0 };
+      dailyMood.set(day, {
+        total: current.total + mood.moodScore,
+        count: current.count + 1,
+      });
+    });
+
+    const moodTrend = Array.from(dailyMood.entries())
+      .map(([date, data]) => ({
+        date,
+        averageMood: Math.round(data.total / data.count),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      moodTrend,
+      currentMood: moodData.length > 0 ? moodData[moodData.length - 1] : null,
+      totalDataPoints: moodData.length,
+    };
+  },
+});
+
+// Get work session analytics
+export const getWorkSessionAnalytics = query({
+  args: {
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const days = args.days || 7;
+    const since = Date.now() - (days * 24 * 60 * 60 * 1000);
+
+    const sessions = await ctx.db
+      .query("workSessions")
+      .withIndex("by_user_and_date", (q) => 
+        q.eq("userId", userId).gte("startTime", since)
+      )
+      .collect();
+
+    // Group by day
+    const dailyHours = new Map<string, number>();
+    
+    sessions.forEach(session => {
+      const day = new Date(session.startTime).toISOString().slice(0, 10);
+      const hours = session.duration ? session.duration / 60 : 0;
+      dailyHours.set(day, (dailyHours.get(day) || 0) + hours);
+    });
+
+    const workHoursTrend = Array.from(dailyHours.entries())
+      .map(([date, hours]) => ({ date, hours: Math.round(hours * 10) / 10 }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const totalHours = Array.from(dailyHours.values()).reduce((sum, h) => sum + h, 0);
+    const averageHours = workHoursTrend.length > 0 ? totalHours / workHoursTrend.length : 0;
+
+    return {
+      workHoursTrend,
+      totalHours: Math.round(totalHours * 10) / 10,
+      averageHours: Math.round(averageHours * 10) / 10,
+      activeSessions: sessions.filter(s => !s.endTime).length,
+    };
+  },
+});
