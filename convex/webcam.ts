@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 
@@ -10,8 +9,9 @@ export const processWebcamFrame = action({
     imageData: v.string(), // base64 encoded image
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     // This would integrate with Twelvelabs API
     // For now, we'll simulate the mood detection
@@ -42,7 +42,7 @@ export const processWebcamFrame = action({
 
 export const storeMoodData = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     timestamp: v.number(),
     mood: v.string(),
     moodScore: v.number(),
@@ -56,7 +56,7 @@ export const storeMoodData = internalMutation({
 
 export const updateWorkSession = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     isPresent: v.boolean(),
     moodScore: v.number(),
   },
@@ -85,8 +85,9 @@ export const updateWorkSession = internalMutation({
         const sessionMoods = await ctx.db
           .query("moodData")
           .withIndex("by_user_and_time", (q) => 
-            q.eq("userId", args.userId).gte("timestamp", activeSession.startTime)
+            q.eq("userId", args.userId)
           )
+          .filter((q) => q.gte(q.field("timestamp"), activeSession.startTime))
           .collect();
 
         const avgMood = sessionMoods.length > 0
@@ -116,8 +117,9 @@ export const getMoodAnalytics = query({
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
 
     const days = args.days || 7;
     const since = Date.now() - (days * 24 * 60 * 60 * 1000);
@@ -125,8 +127,9 @@ export const getMoodAnalytics = query({
     const moodData = await ctx.db
       .query("moodData")
       .withIndex("by_user_and_time", (q) => 
-        q.eq("userId", userId).gte("timestamp", since)
+        q.eq("userId", userId)
       )
+      .filter((q) => q.gte(q.field("timestamp"), since))
       .collect();
 
     // Group by day
@@ -162,8 +165,9 @@ export const getWorkSessionAnalytics = query({
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
 
     const days = args.days || 7;
     const since = Date.now() - (days * 24 * 60 * 60 * 1000);
@@ -171,8 +175,9 @@ export const getWorkSessionAnalytics = query({
     const sessions = await ctx.db
       .query("workSessions")
       .withIndex("by_user_and_date", (q) => 
-        q.eq("userId", userId).gte("startTime", since)
+        q.eq("userId", userId)
       )
+      .filter((q) => q.gte(q.field("startTime"), since))
       .collect();
 
     // Group by day

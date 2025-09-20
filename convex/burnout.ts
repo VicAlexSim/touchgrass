@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
 
@@ -8,8 +7,9 @@ import { internalMutation, internalQuery } from "./_generated/server";
 export const calculateBurnoutScore = action({
   args: {},
   handler: async (ctx): Promise<{ riskScore: number; factors: any; shouldNotify: boolean }> => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     const today = new Date().toISOString().slice(0, 10);
 
@@ -67,7 +67,7 @@ export const calculateBurnoutScore = action({
 
 // Internal scoring functions
 export const getVelocityScore = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
     const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
@@ -75,17 +75,17 @@ export const getVelocityScore = internalQuery({
     const recentPoints = await ctx.db
       .query("storyPoints")
       .withIndex("by_user_and_date", (q) => 
-        q.eq("userId", args.userId).gte("completedAt", oneWeekAgo)
+        q.eq("userId", args.userId)
       )
+      .filter((q) => q.gte(q.field("completedAt"), oneWeekAgo))
       .collect();
 
     const previousPoints = await ctx.db
       .query("storyPoints")
       .withIndex("by_user_and_date", (q) => 
         q.eq("userId", args.userId)
-         .gte("completedAt", twoWeeksAgo)
-         .lt("completedAt", oneWeekAgo)
       )
+      .filter((q) => q.gte(q.field("completedAt"), twoWeeksAgo) && q.lt(q.field("completedAt"), oneWeekAgo))
       .collect();
 
     const recentVelocity = recentPoints.reduce((sum, sp) => sum + sp.points, 0);
@@ -106,7 +106,7 @@ export const getVelocityScore = internalQuery({
 });
 
 export const getMoodScore = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
@@ -127,7 +127,7 @@ export const getMoodScore = internalQuery({
 });
 
 export const getWorkHoursScore = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
@@ -152,7 +152,7 @@ export const getWorkHoursScore = internalQuery({
 });
 
 export const getBreakScore = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     const today = Date.now();
     const startOfDay = new Date(today).setHours(0, 0, 0, 0);
@@ -181,7 +181,7 @@ export const getBreakScore = internalQuery({
 
 export const storeBurnoutScore = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     date: v.string(),
     riskScore: v.number(),
     factors: v.object({
@@ -214,7 +214,7 @@ export const storeBurnoutScore = internalMutation({
 });
 
 export const getUserSettings = internalQuery({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("userSettings")
@@ -225,7 +225,7 @@ export const getUserSettings = internalQuery({
 
 export const markNotificationSent = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     date: v.string(),
   },
   handler: async (ctx, args) => {
@@ -248,8 +248,9 @@ export const getBurnoutHistory = query({
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
 
     const days = args.days || 30;
     const since = new Date(Date.now() - (days * 24 * 60 * 60 * 1000))
@@ -270,8 +271,9 @@ export const getBurnoutHistory = query({
 export const getCurrentRiskScore = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
 
     const today = new Date().toISOString().slice(0, 10);
 
@@ -294,8 +296,9 @@ export const updateUserSettings = mutation({
     targetBreakInterval: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     const existing = await ctx.db
       .query("userSettings")

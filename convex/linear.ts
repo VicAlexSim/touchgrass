@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Store Linear project connection
 export const connectLinearProject = mutation({
@@ -12,8 +11,9 @@ export const connectLinearProject = mutation({
     accessToken: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     // Check if project already exists
     const existing = await ctx.db
@@ -44,8 +44,9 @@ export const syncLinearData = action({
     projectId: v.string(),
   },
   handler: async (ctx, args): Promise<{ synced: number }> => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     // Get project credentials
     const project: any = await ctx.runQuery(internal.linear.getProjectCredentials, {
@@ -125,7 +126,7 @@ import { internalQuery, internalMutation } from "./_generated/server";
 
 export const getProjectCredentials = internalQuery({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     projectId: v.string(),
   },
   handler: async (ctx, args) => {
@@ -139,7 +140,7 @@ export const getProjectCredentials = internalQuery({
 
 export const storeStoryPoints = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     projectId: v.string(),
     issueId: v.string(),
     points: v.number(),
@@ -166,8 +167,9 @@ export const getVelocityMetrics = query({
     days: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const userId = identity.subject;
 
     const days = args.days || 30;
     const since = Date.now() - (days * 24 * 60 * 60 * 1000);
@@ -175,8 +177,9 @@ export const getVelocityMetrics = query({
     const storyPoints = await ctx.db
       .query("storyPoints")
       .withIndex("by_user_and_date", (q) => 
-        q.eq("userId", userId).gte("completedAt", since)
+        q.eq("userId", userId)
       )
+      .filter((q) => q.gte(q.field("completedAt"), since))
       .collect();
 
     // Group by week

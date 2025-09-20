@@ -13,7 +13,6 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as auth from "../auth.js";
 import type * as burnout from "../burnout.js";
 import type * as http from "../http.js";
 import type * as linear from "../linear.js";
@@ -29,7 +28,6 @@ import type * as webcam from "../webcam.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  auth: typeof auth;
   burnout: typeof burnout;
   http: typeof http;
   linear: typeof linear;
