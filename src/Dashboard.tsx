@@ -1,25 +1,29 @@
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { RiskScoreCard } from "./components/RiskScoreCard";
 import { VelocityChart } from "./components/VelocityChart";
-import { MoodChart } from "./components/MoodChart";
-import { WorkHoursChart } from "./components/WorkHoursChart";
+import { DailyMoodChart } from "./components/DailyMoodChart";
+import { WakatimeChart } from "./components/WakatimeChart";
 import { LinearIntegration } from "./components/LinearIntegration";
+import { WakatimeIntegration } from "./components/WakatimeIntegration";
 import { Settings } from "./components/Settings";
+import { CommitChart } from "./components/CommitChart";
+import { BurnoutHistoryChart } from "./components/BurnoutHistoryChart";
+import { TimeRangeFilter, TimeRange } from "./components/TimeRangeFilter";
 import { NewerWebcamMonitor } from "./components/NewerWebcamMonitor";
+import { BreakDetectionMonitor } from "./components/BreakDetectionMonitor";
+import { PDFExport } from "./components/PDFExport";
+import { BreakStats } from "./components/BreakStats";
+
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "integrations" | "settings"
-  >("overview");
-
+  const [activeTab, setActiveTab] = useState<"overview" | "integrations" | "settings">("overview");
+  const [timeRange, setTimeRange] = useState<TimeRange>(7);
   const currentRisk = useQuery(api.burnout.getCurrentRiskScore);
   const velocityMetrics = useQuery(api.linear.getVelocityMetrics, { days: 30 });
   const moodAnalytics = useQuery(api.webcam.getMoodAnalytics, { days: 7 });
-  const workHours = useQuery(api.webcam.getWorkSessionAnalytics, { days: 7 });
   const burnoutHistory = useQuery(api.burnout.getBurnoutHistory, { days: 30 });
-
   const calculateBurnout = useAction(api.burnout.calculateBurnoutScore);
 
   // Auto-calculate burnout score every 5 minutes
@@ -57,7 +61,7 @@ export function Dashboard() {
               icon: "/favicon.ico",
             });
           }
-        });
+        }).catch(console.error);
       }
     }
   }, [currentRisk]);
@@ -81,7 +85,11 @@ export function Dashboard() {
           </p>
         </div>
 
-        <NewerWebcamMonitor />
+        <div className="flex items-center gap-4">
+          <PDFExport />
+          <BreakDetectionMonitor />
+          <NewerWebcamMonitor />
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -107,6 +115,11 @@ export function Dashboard() {
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
+          {/* Time Range Filter */}
+          <div className="flex justify-end">
+            <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
+          </div>
+          
           {/* Risk Score */}
           <RiskScoreCard
             riskScore={currentRisk?.riskScore || 0}
@@ -115,76 +128,68 @@ export function Dashboard() {
           />
 
           {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
             <VelocityChart
               data={velocityMetrics?.velocityData || []}
               loading={velocityMetrics === undefined}
             />
 
-            <MoodChart
+            <DailyMoodChart
               data={moodAnalytics?.moodTrend || []}
               loading={moodAnalytics === undefined}
             />
-
-            <WorkHoursChart
-              data={workHours?.workHoursTrend || []}
-              loading={workHours === undefined}
-            />
           </div>
 
+          {/* Wakatime Chart */}
+          <WakatimeChart days={timeRange} />
+          <CommitChart days={timeRange} />
+
+          {/* Break Statistics */}
+          <BreakStats />
+
           {/* Burnout History */}
-          {burnoutHistory && burnoutHistory.length > 0 && (
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Burnout Risk History
-              </h3>
-              <div className="h-64">
-                <div className="flex items-end justify-between h-full space-x-2">
-                  {burnoutHistory.slice(-14).map((score, index) => (
-                    <div
-                      key={score._id}
-                      className="flex flex-col items-center flex-1"
-                    >
-                      <div
-                        className={`w-full rounded-t ${
-                          score.riskScore >= 75
-                            ? "bg-red-500"
-                            : score.riskScore >= 50
-                              ? "bg-yellow-500"
-                              : "bg-green-500"
-                        }`}
-                        style={{ height: `${(score.riskScore / 100) * 200}px` }}
-                      />
-                      <span className="text-xs text-gray-500 mt-1">
-                        {new Date(score.date).getDate()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <BurnoutHistoryChart
+            data={burnoutHistory || []}
+            loading={burnoutHistory === undefined}
+          />
         </div>
       )}
 
       {activeTab === "integrations" && (
         <div className="space-y-6">
           <LinearIntegration />
+          <WakatimeIntegration />
 
           <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Twelvelabs Webcam Integration
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">GitHub Commit Analysis</h3>
             <p className="text-gray-600 mb-4">
-              Webcam monitoring is automatically enabled. The system analyzes
-              your mood and presence in real-time using AI-powered video
-              analysis.
+              Automatically analyzes your GitHub commit patterns to detect burnout indicators like
+              late-night coding and weekend work.
             </p>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
-                Active and monitoring
-              </span>
+              <span className="text-sm text-gray-600">Active and analyzing</span>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Hybrid Webcam Monitoring
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Dual-layer webcam monitoring combines face-api.js for real-time break detection 
+              with TwelveLabs AI for advanced mood analysis. The system tracks when you step 
+              away from your desk and analyzes your emotional state for comprehensive burnout prevention.
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Face-API.js break detection active</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">TwelveLabs mood analysis active</span>
+              </div>
             </div>
           </div>
         </div>
