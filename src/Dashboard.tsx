@@ -5,7 +5,6 @@ import { RiskScoreCard } from "./components/RiskScoreCard";
 import { VelocityChart } from "./components/VelocityChart";
 import { MoodChart } from "./components/MoodChart";
 import { WorkHoursChart } from "./components/WorkHoursChart";
-import { NewWebcamMonitor } from "./components/NewWebcamMonitor";
 import { LinearIntegration } from "./components/LinearIntegration";
 import { Settings } from "./components/Settings";
 import { NewerWebcamMonitor } from "./components/NewerWebcamMonitor";
