@@ -6,7 +6,9 @@ import { internalMutation, internalQuery } from "./_generated/server";
 // Calculate burnout risk score
 export const calculateBurnoutScore = action({
   args: {},
-  handler: async (ctx): Promise<{ riskScore: number; factors: any; shouldNotify: boolean }> => {
+  handler: async (
+    ctx
+  ): Promise<{ riskScore: number; factors: any; shouldNotify: boolean }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.subject;
@@ -14,16 +16,28 @@ export const calculateBurnoutScore = action({
     const today = new Date().toISOString().slice(0, 10);
 
     // Get velocity data (last 14 days)
-    const velocityScore: number = await ctx.runQuery(internal.burnout.getVelocityScore, { userId });
-    
+    const velocityScore: number = await ctx.runQuery(
+      internal.burnout.getVelocityScore,
+      { userId }
+    );
+
     // Get mood data (last 7 days)
-    const moodScore: number = await ctx.runQuery(internal.burnout.getMoodScore, { userId });
-    
+    const moodScore: number = await ctx.runQuery(
+      internal.burnout.getMoodScore,
+      { userId }
+    );
+
     // Get work hours data (last 7 days)
-    const workHoursScore: number = await ctx.runQuery(internal.burnout.getWorkHoursScore, { userId });
-    
+    const workHoursScore: number = await ctx.runQuery(
+      internal.burnout.getWorkHoursScore,
+      { userId }
+    );
+
     // Get break frequency score
-    const breakScore: number = await ctx.runQuery(internal.burnout.getBreakScore, { userId });
+    const breakScore: number = await ctx.runQuery(
+      internal.burnout.getBreakScore,
+      { userId }
+    );
 
     // Calculate weighted risk score (0-100)
     const factors = {
@@ -34,10 +48,10 @@ export const calculateBurnoutScore = action({
     };
 
     const riskScore = Math.round(
-      (factors.velocityScore * 0.25) +
-      (factors.moodScore * 0.35) +
-      (factors.workHoursScore * 0.25) +
-      (factors.breakScore * 0.15)
+      factors.velocityScore * 0.25 +
+        factors.moodScore * 0.35 +
+        factors.workHoursScore * 0.25 +
+        factors.breakScore * 0.15
     );
 
     // Store the score
@@ -49,7 +63,9 @@ export const calculateBurnoutScore = action({
     });
 
     // Check if notification should be sent
-    const settings = await ctx.runQuery(internal.burnout.getUserSettings, { userId });
+    const settings = await ctx.runQuery(internal.burnout.getUserSettings, {
+      userId,
+    });
     const threshold = settings?.riskThreshold || 75;
 
     if (riskScore >= threshold && settings?.notificationsEnabled !== false) {
@@ -57,7 +73,7 @@ export const calculateBurnoutScore = action({
         userId,
         date: today,
       });
-      
+
       return { riskScore, factors, shouldNotify: true };
     }
 
@@ -69,38 +85,42 @@ export const calculateBurnoutScore = action({
 export const getVelocityScore = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
-    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     const recentPoints = await ctx.db
       .query("storyPoints")
-      .withIndex("by_user_and_date", (q) => 
-        q.eq("userId", args.userId)
-      )
+      .withIndex("by_user_and_date", (q) => q.eq("userId", args.userId))
       .filter((q) => q.gte(q.field("completedAt"), oneWeekAgo))
       .collect();
 
     const previousPoints = await ctx.db
       .query("storyPoints")
-      .withIndex("by_user_and_date", (q) => 
-        q.eq("userId", args.userId)
+      .withIndex("by_user_and_date", (q) => q.eq("userId", args.userId))
+      .filter(
+        (q) =>
+          q.gte(q.field("completedAt"), twoWeeksAgo) &&
+          q.lt(q.field("completedAt"), oneWeekAgo)
       )
-      .filter((q) => q.gte(q.field("completedAt"), twoWeeksAgo) && q.lt(q.field("completedAt"), oneWeekAgo))
       .collect();
 
     const recentVelocity = recentPoints.reduce((sum, sp) => sum + sp.points, 0);
-    const previousVelocity = previousPoints.reduce((sum, sp) => sum + sp.points, 0);
+    const previousVelocity = previousPoints.reduce(
+      (sum, sp) => sum + sp.points,
+      0
+    );
 
     if (previousVelocity === 0) return 0;
 
-    const velocityChange = (recentVelocity - previousVelocity) / previousVelocity;
-    
+    const velocityChange =
+      (recentVelocity - previousVelocity) / previousVelocity;
+
     // High velocity increase = higher burnout risk
     if (velocityChange > 0.5) return 80; // 50%+ increase
     if (velocityChange > 0.3) return 60; // 30%+ increase
     if (velocityChange > 0.1) return 40; // 10%+ increase
     if (velocityChange < -0.3) return 70; // 30%+ decrease (also risky)
-    
+
     return 20; // Normal velocity
   },
 });
@@ -108,19 +128,20 @@ export const getVelocityScore = internalQuery({
 export const getMoodScore = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     const moodData = await ctx.db
       .query("moodData")
-      .withIndex("by_user_and_time", (q) => 
+      .withIndex("by_user_and_time", (q) =>
         q.eq("userId", args.userId).gte("timestamp", oneWeekAgo)
       )
       .collect();
 
     if (moodData.length === 0) return 0;
 
-    const averageMood = moodData.reduce((sum, m) => sum + m.moodScore, 0) / moodData.length;
-    
+    const averageMood =
+      moodData.reduce((sum, m) => sum + (m.mood || 0), 0) / moodData.length;
+
     // Lower mood = higher burnout risk (invert the score)
     return Math.round(100 - averageMood);
   },
@@ -129,16 +150,17 @@ export const getMoodScore = internalQuery({
 export const getWorkHoursScore = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     const sessions = await ctx.db
       .query("workSessions")
-      .withIndex("by_user_and_date", (q) => 
+      .withIndex("by_user_and_date", (q) =>
         q.eq("userId", args.userId).gte("startTime", oneWeekAgo)
       )
       .collect();
 
-    const totalHours = sessions.reduce((sum, s) => sum + (s.duration || 0), 0) / 60;
+    const totalHours =
+      sessions.reduce((sum, s) => sum + (s.duration || 0), 0) / 60;
     const averageHoursPerDay = totalHours / 7;
 
     // More than 10 hours/day = high risk
@@ -146,7 +168,7 @@ export const getWorkHoursScore = internalQuery({
     if (averageHoursPerDay > 8) return 60;
     if (averageHoursPerDay > 6) return 30;
     if (averageHoursPerDay < 2) return 20; // Too little work might indicate disengagement
-    
+
     return 10; // Normal work hours
   },
 });
@@ -159,22 +181,28 @@ export const getBreakScore = internalQuery({
 
     const todaySessions = await ctx.db
       .query("workSessions")
-      .withIndex("by_user_and_date", (q) => 
+      .withIndex("by_user_and_date", (q) =>
         q.eq("userId", args.userId).gte("startTime", startOfDay)
       )
       .collect();
 
-    const totalBreaks = todaySessions.reduce((sum, s) => sum + s.breaksTaken, 0);
-    const totalWorkTime = todaySessions.reduce((sum, s) => sum + (s.duration || 0), 0);
+    const totalBreaks = todaySessions.reduce(
+      (sum, s) => sum + s.breaksTaken,
+      0
+    );
+    const totalWorkTime = todaySessions.reduce(
+      (sum, s) => sum + (s.duration || 0),
+      0
+    );
 
     if (totalWorkTime === 0) return 0;
 
     const breaksPerHour = totalBreaks / (totalWorkTime / 60);
-    
+
     // Less than 1 break per 2 hours = high risk
     if (breaksPerHour < 0.5) return 80;
     if (breaksPerHour < 1) return 50;
-    
+
     return 10; // Good break frequency
   },
 });
@@ -194,7 +222,7 @@ export const storeBurnoutScore = internalMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("burnoutScores")
-      .withIndex("by_user_and_date", (q) => 
+      .withIndex("by_user_and_date", (q) =>
         q.eq("userId", args.userId).eq("date", args.date)
       )
       .first();
@@ -231,7 +259,7 @@ export const markNotificationSent = internalMutation({
   handler: async (ctx, args) => {
     const score = await ctx.db
       .query("burnoutScores")
-      .withIndex("by_user_and_date", (q) => 
+      .withIndex("by_user_and_date", (q) =>
         q.eq("userId", args.userId).eq("date", args.date)
       )
       .first();
@@ -253,12 +281,13 @@ export const getBurnoutHistory = query({
     const userId = identity.subject;
 
     const days = args.days || 30;
-    const since = new Date(Date.now() - (days * 24 * 60 * 60 * 1000))
-      .toISOString().slice(0, 10);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
 
     const scores = await ctx.db
       .query("burnoutScores")
-      .withIndex("by_user_and_date", (q) => 
+      .withIndex("by_user_and_date", (q) =>
         q.eq("userId", userId).gte("date", since)
       )
       .collect();
@@ -279,7 +308,7 @@ export const getCurrentRiskScore = query({
 
     return await ctx.db
       .query("burnoutScores")
-      .withIndex("by_user_and_date", (q) => 
+      .withIndex("by_user_and_date", (q) =>
         q.eq("userId", userId).eq("date", today)
       )
       .first();
