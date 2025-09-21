@@ -1,50 +1,93 @@
-# TouchGrass MVP - Burnout Prevention App
-  
-This is a project built with [Chef](https://chef.convex.dev) using [Convex](https://convex.dev) as its backend.
- You can find docs about Chef with useful information like how to deploy to production [here](https://docs.convex.dev/chef).
-  
-This project is connected to the Convex deployment named [`perfect-setter-780`](https://dashboard.convex.dev/d/perfect-setter-780).
-  
-## Project structure
-  
-The frontend code is in the `app` directory and is built with [Vite](https://vitejs.dev/).
-  
-The backend code is in the `convex` directory.
-  
-`npm run dev` will start the frontend and backend servers.
+# TouchGrass - Burnout Prevention for Developers
 
-## App authentication
+## Inspiration
 
-Chef apps use [Convex Auth](https://auth.convex.dev/) with Anonymous auth for easy sign in. You may wish to change this before deploying your app.
+As ambitious software engineers, we spend a lot of time on our computers and are incredibly vulnerable to burnout. We want to empower coders to monitor their productivity and detect signs of burnout before it's too late.
 
-## Environment Setup
+## What it does
 
-### GitHub Integration
+Our web app monitors your webcam to estimate your mood and how much time you're spending at your desk each day. It also monitors your Linear account to see how quickly you're crushing story points. We use this data to predict when you might be prone to burnout and proactively remind you to take breaks.
 
-To enable GitHub commit pattern analysis with higher rate limits, add a GitHub Personal Access Token:
+**Key Features:**
+- **Real-time Mood Monitoring**: Uses face-api.js and TwelveLabs AI to analyze webcam feeds for mood detection and presence tracking
+- **Work Session Tracking**: Automatically tracks continuous work sessions and breaks
+- **Multi-Source Data Integration**: Combines mood data with Linear velocity, GitHub commit patterns, and Wakatime coding metrics
+- **Burnout Risk Prediction**: Advanced algorithm calculates daily burnout risk scores (0-100) based on multiple factors
+- **Smart Notifications**: Sends browser notifications when burnout risk exceeds user-defined thresholds
+- **Comprehensive Dashboard**: Visualizes trends with interactive charts for mood, work hours, velocity, and burnout history
 
-1. Go to [GitHub Settings > Personal Access Tokens](https://github.com/settings/tokens)
-2. Generate a new token (classic) with `public_repo` scope (or `repo` for private repositories)
-3. Add it to your environment variables:
+## How we built it
 
-```bash
-# In your .env.local file or deployment environment
-GITHUB_TOKEN=ghp_your_token_here
-```
+**Technology Stack:**
+- **Frontend**: React 19 with Vite, TypeScript, and Tailwind CSS
+- **Backend**: Convex for real-time database, functions, and authentication
+- **UI Components**: Radix UI primitives with shadcn/ui component library
+- **Data Visualization**: Recharts for interactive charts and graphs
+- **AI/ML**: face-api.js for break detection and TwelveLabs for advanced mood analysis
+- **Authentication**: Auth0 integration for secure user management
 
-**Rate Limits:**
-- Without token: 60 requests/hour per IP
-- With token: 5,000 requests/hour per user
+**Architecture:**
+- **Real-time Database**: Convex handles all data storage and real-time updates
+- **Multi-Service Integration**: APIs for Linear (project management), GitHub (commit analysis), and Wakatime (coding time tracking)
+- **Background Processing**: Automated burnout score calculations using Convex actions and internal functions
+- **Responsive Design**: Mobile-friendly interface with adaptive layouts
 
-The app will work without a token but may hit rate limits with frequent usage.
+**Data Flow:**
+1. Webcam monitoring captures mood and presence data
+2. Linear integration tracks velocity and story point completion
+3. GitHub API analyzes commit patterns and timing
+4. Wakatime API provides coding time metrics
+5. Burnout algorithm combines all data sources to calculate risk scores
+6. Dashboard visualizes trends and triggers notifications when needed
 
-## Developing and deploying your app
+## Challenges we ran into
 
-Check out the [Convex docs](https://docs.convex.dev/) for more information on how to develop with Convex.
-* If you're new to Convex, the [Overview](https://docs.convex.dev/understanding/) is a good place to start
-* Check out the [Hosting and Deployment](https://docs.convex.dev/production/) docs for how to deploy your app
-* Read the [Best Practices](https://docs.convex.dev/understanding/best-practices/) guide for tips on how to improve you app further
+1. **Real-time Webcam Processing**: Implementing efficient webcam monitoring without performance degradation required careful optimization of face-api.js models and TwelveLabs API calls.
 
-## HTTP API
+2. **Multi-Service API Integration**: Managing rate limits and authentication across multiple third-party services (Linear, GitHub, Wakatime) while maintaining a seamless user experience.
 
-User-defined http routes are defined in the `convex/router.ts` file. We split these routes into a separate file from `convex/http.ts` to allow us to prevent the LLM from modifying the authentication routes.
+3. **Burnout Algorithm Development**: Creating an accurate burnout prediction model that appropriately weights different factors (velocity, mood, work hours, breaks) based on data availability.
+
+4. **Privacy Concerns**: Ensuring user privacy with webcam monitoring while still providing valuable insights through local processing and secure data handling.
+
+5. **Real-time Notifications**: Implementing browser notifications that work reliably across different platforms and browsers without being intrusive.
+
+## Accomplishments that we're proud of
+
+1. **Comprehensive Burnout Detection**: Successfully integrated multiple data sources to create a holistic view of developer wellbeing and burnout risk.
+
+2. **Real-time Monitoring**: Built a responsive system that continuously monitors user activity and provides immediate feedback without significant performance impact.
+
+3. **Clean Architecture**: Established a scalable codebase following Convex best practices with proper separation of concerns, TypeScript typing, and modular design.
+
+4. **User-Friendly Interface**: Created an intuitive dashboard with interactive charts and clear visual indicators for burnout risk factors.
+
+5. **Privacy-First Design**: Implemented local webcam processing and secure data handling to protect user privacy while still providing valuable insights.
+
+## What we learned
+
+1. **Convex Power**: Leveraged Convex's real-time capabilities and background processing to create a responsive, data-driven application without managing servers.
+
+2. **Multi-Model AI Integration**: Learned to effectively combine different AI services (face-api.js and TwelveLabs) for enhanced mood detection accuracy.
+
+3. **User Experience Design**: Understood the importance of balancing comprehensive data collection with non-intrusive user experience.
+
+4. **Rate Limit Management**: Developed strategies for handling API rate limits across multiple services while maintaining application functionality.
+
+5. **Burnout Psychology**: Gained insights into the various factors that contribute to developer burnout and how to effectively measure and mitigate them.
+
+## What's next for TouchGrass
+
+1. **Mobile App Development**: Extend the platform to mobile devices for on-the-go burnout monitoring and insights.
+
+2. **Team Features**: Add team-level analytics and management tools for engineering teams to monitor collective wellbeing.
+
+3. **Advanced AI Models**: Integrate more sophisticated machine learning models for improved burnout prediction and personalized recommendations.
+
+4. **Integration Expansion**: Add support for additional project management tools like Jira, Asana, and Trello.
+
+5. **Wellness Recommendations**: Develop personalized wellness recommendations based on individual patterns and risk factors.
+
+6. **Historical Analysis**: Implement long-term trend analysis and pattern recognition to identify chronic burnout risks.
+
+7. **Enterprise Features**: Add organization-level dashboards, compliance features, and advanced analytics for enterprise customers.
