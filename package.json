@@ -16,8 +16,11 @@
     "convex": "^1.24.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-media-recorder": "^1.7.2",
+    "react-record-webcam": "^1.1.5",
     "sonner": "^2.0.3",
-    "tailwind-merge": "^3.1.0"
+    "tailwind-merge": "^3.1.0",
+    "twelvelabs-js": "^1.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

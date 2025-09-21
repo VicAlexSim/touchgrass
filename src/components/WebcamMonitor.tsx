@@ -1,111 +1,115 @@
-import { useState, useRef, useEffect } from "react";
+import Webcam from "react-webcam";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export function WebcamMonitor() {
-  const [isActive, setIsActive] = useState(false);
-  const [currentMood, setCurrentMood] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  
-  const processFrame = useAction(api.webcam.processWebcamFrame);
+  const webcamRef = useRef<Webcam | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [capturing, setCapturing] = useState(false);
+  const processChunk = useAction(api.webcam.processChunk);
+  const generateUploadUrl = useMutation(api.webcam.generateUploadUrl);
 
-  const startMonitoring = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 640, height: 480 } 
+  const analyzeWebcamClip = useCallback(
+    async (videoFile: Blob) => {
+      // Step 1: Get a short-lived upload URL
+      const postUrl = await generateUploadUrl();
+      // Step 2: POST the file to the URL
+      const result = await fetch(postUrl, {
+        method: "POST",
+        headers: { "Content-Type": videoFile.type },
+        body: videoFile,
       });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsActive(true);
+      const { storageId } = await result.json();
+      void processChunk({ videoStorageId: storageId });
+    },
+    [processChunk]
+  );
+
+  const handleDataAvailable = useCallback(
+    (event: BlobEvent) => {
+      const chunk = event.data;
+      if (chunk && chunk.size > 0) {
+        void analyzeWebcamClip(chunk);
       }
-    } catch (error) {
-      console.error("Error accessing webcam:", error);
-      alert("Unable to access webcam. Please check permissions.");
+    },
+    [analyzeWebcamClip]
+  );
+
+  const handleStartCapture = useCallback(() => {
+    const stream = (
+      webcamRef.current as unknown as { stream?: MediaStream } | null
+    )?.stream;
+    if (!stream) {
+      console.warn("Webcam stream not ready yet");
+      return;
     }
-  };
 
-  const stopMonitoring = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+    const supportedMimeType =
+      typeof MediaRecorder !== "undefined" &&
+      MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+        ? "video/webm;codecs=vp8"
+        : MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : undefined;
+
+    const options: MediaRecorderOptions = supportedMimeType
+      ? { mimeType: supportedMimeType }
+      : {};
+    const recorder = new MediaRecorder(stream, options);
+    mediaRecorderRef.current = recorder;
+    recorder.addEventListener("dataavailable", handleDataAvailable);
+
+    // Request a dataavailable event every 5 seconds
+    recorder.start(5_000);
+    setCapturing(true);
+  }, [handleDataAvailable]);
+
+  const handleStopCapture = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.removeEventListener("dataavailable", handleDataAvailable);
+      recorder.stop();
     }
-    setIsActive(false);
-    setCurrentMood(null);
-  };
-
-  const captureFrame = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-    
-    // Convert to base64
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    // Process with Twelvelabs (simulated)
-    processFrame({ imageData })
-      .then(result => {
-        setCurrentMood(result.mood);
-      })
-      .catch(console.error);
-  };
+    setCapturing(false);
+  }, [handleDataAvailable]);
 
   useEffect(() => {
-    if (!isActive) return;
-
-    const interval = setInterval(captureFrame, 10000); // Every 10 seconds
-    return () => clearInterval(interval);
-  }, [isActive]);
+    const camRef = webcamRef.current as unknown as {
+      stream?: MediaStream;
+    } | null;
+    return () => {
+      // Cleanup on unmount
+      try {
+        handleStopCapture();
+      } catch (err) {
+        console.warn("Error stopping capture on cleanup", err);
+      }
+      const stream = camRef?.stream;
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [handleStopCapture]);
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
-        <span className="text-sm text-gray-600">
-          {isActive ? 'Monitoring' : 'Inactive'}
-        </span>
-        {currentMood && (
-          <span className="text-sm text-gray-500">
-            Mood: {currentMood}
-          </span>
+    <div className="relative w-50 h-50">
+      <Webcam audio={false} ref={webcamRef} />
+      <div className="mt-2 flex gap-2">
+        {capturing ? (
+          <button
+            onClick={handleStopCapture}
+            className="px-3 py-1 rounded bg-red-600 text-white"
+          >
+            Stop Capture
+          </button>
+        ) : (
+          <button
+            onClick={handleStartCapture}
+            className="px-3 py-1 rounded bg-green-600 text-white"
+          >
+            Start Capture
+          </button>
         )}
       </div>
-
-      <button
-        onClick={isActive ? stopMonitoring : startMonitoring}
-        className={`px-4 py-2 rounded-lg text-sm font-medium ${
-          isActive 
-            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-            : 'bg-green-100 text-green-700 hover:bg-green-200'
-        }`}
-      >
-        {isActive ? 'Stop Monitoring' : 'Start Monitoring'}
-      </button>
-
-      {/* Hidden video and canvas elements */}
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        className="hidden"
-        onLoadedMetadata={() => {
-          if (videoRef.current) {
-            videoRef.current.play();
-          }
-        }}
-      />
-      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
