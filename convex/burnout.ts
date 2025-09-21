@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
 
 // Calculate burnout risk score
@@ -25,19 +25,24 @@ export const calculateBurnoutScore = action({
     // Get break frequency score
     const breakScore: number = await ctx.runQuery(internal.burnout.getBreakScore, { userId });
 
+    // Get commit patterns score
+    const commitPatternsScore: number = await ctx.runQuery(internal.burnout.getCommitPatternsScore, { userId });
+
     // Calculate weighted risk score (0-100)
     const factors = {
       velocityScore: velocityScore || 0,
       moodScore: moodScore || 0,
       workHoursScore: workHoursScore || 0,
       breakScore: breakScore || 0,
+      commitPatternsScore: commitPatternsScore || 0,
     };
 
     const riskScore = Math.round(
-      (factors.velocityScore * 0.25) +
-      (factors.moodScore * 0.35) +
-      (factors.workHoursScore * 0.25) +
-      (factors.breakScore * 0.15)
+      (factors.velocityScore * 0.20) +
+      (factors.moodScore * 0.30) +
+      (factors.workHoursScore * 0.20) +
+      (factors.breakScore * 0.10) +
+      (factors.commitPatternsScore * 0.20)
     );
 
     // Store the score
@@ -179,6 +184,19 @@ export const getBreakScore = internalQuery({
   },
 });
 
+export const getCommitPatternsScore = internalQuery({
+  args: { userId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, _args): Promise<number> => {
+    try {
+      return await ctx.runQuery(api.github.calculateCommitPatternsRisk, {});
+    } catch (error) {
+      console.warn("Failed to calculate commit patterns risk:", error);
+      return 0; // Return 0 if GitHub data is unavailable
+    }
+  },
+});
+
 export const storeBurnoutScore = internalMutation({
   args: {
     userId: v.string(),
@@ -189,6 +207,7 @@ export const storeBurnoutScore = internalMutation({
       moodScore: v.number(),
       workHoursScore: v.number(),
       breakScore: v.number(),
+      commitPatternsScore: v.optional(v.number()),
     }),
   },
   handler: async (ctx, args) => {

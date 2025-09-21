@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { RiskScoreCard } from "./components/RiskScoreCard";
@@ -8,6 +8,9 @@ import { WorkHoursChart } from "./components/WorkHoursChart";
 import { WebcamMonitor } from "./components/WebcamMonitor";
 import { LinearIntegration } from "./components/LinearIntegration";
 import { Settings } from "./components/Settings";
+import { CommitChart } from "./components/CommitChart";
+import { BurnoutHistoryChart } from "./components/BurnoutHistoryChart";
+
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "integrations" | "settings">("overview");
@@ -48,7 +51,7 @@ export function Dashboard() {
               icon: "/favicon.ico",
             });
           }
-        });
+        }).catch(console.error);
       }
     }
   }, [currentRisk]);
@@ -103,57 +106,53 @@ export function Dashboard() {
 
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            <VelocityChart 
+            <VelocityChart
               data={velocityMetrics?.velocityData || []}
               loading={velocityMetrics === undefined}
             />
-            
-            <MoodChart 
+
+            <MoodChart
               data={moodAnalytics?.moodTrend || []}
               loading={moodAnalytics === undefined}
             />
-            
-            <WorkHoursChart 
+
+            <WorkHoursChart
               data={workHours?.workHoursTrend || []}
               loading={workHours === undefined}
             />
+
+            
           </div>
+          <CommitChart />
 
           {/* Burnout History */}
-          {burnoutHistory && burnoutHistory.length > 0 && (
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Burnout Risk History</h3>
-              <div className="h-64">
-                <div className="flex items-end justify-between h-full space-x-2">
-                  {burnoutHistory.slice(-14).map((score, index) => (
-                    <div key={score._id} className="flex flex-col items-center flex-1">
-                      <div 
-                        className={`w-full rounded-t ${
-                          score.riskScore >= 75 ? 'bg-red-500' :
-                          score.riskScore >= 50 ? 'bg-yellow-500' : 'bg-green-500'
-                        }`}
-                        style={{ height: `${(score.riskScore / 100) * 200}px` }}
-                      />
-                      <span className="text-xs text-gray-500 mt-1">
-                        {new Date(score.date).getDate()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <BurnoutHistoryChart
+            data={burnoutHistory || []}
+            loading={burnoutHistory === undefined}
+          />
         </div>
       )}
 
       {activeTab === "integrations" && (
         <div className="space-y-6">
           <LinearIntegration />
-          
+
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">GitHub Commit Analysis</h3>
+            <p className="text-gray-600 mb-4">
+              Automatically analyzes your GitHub commit patterns to detect burnout indicators like
+              late-night coding and weekend work.
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-gray-600">Active and analyzing</span>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Twelvelabs Webcam Integration</h3>
             <p className="text-gray-600 mb-4">
-              Webcam monitoring is automatically enabled. The system analyzes your mood and presence 
+              Webcam monitoring is automatically enabled. The system analyzes your mood and presence
               in real-time using AI-powered video analysis.
             </p>
             <div className="flex items-center gap-2">

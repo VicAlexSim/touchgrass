@@ -17,6 +17,27 @@ The backend code is in the `convex` directory.
 
 Chef apps use [Convex Auth](https://auth.convex.dev/) with Anonymous auth for easy sign in. You may wish to change this before deploying your app.
 
+## Environment Setup
+
+### GitHub Integration
+
+To enable GitHub commit pattern analysis with higher rate limits, add a GitHub Personal Access Token:
+
+1. Go to [GitHub Settings > Personal Access Tokens](https://github.com/settings/tokens)
+2. Generate a new token (classic) with `public_repo` scope (or `repo` for private repositories)
+3. Add it to your environment variables:
+
+```bash
+# In your .env.local file or deployment environment
+GITHUB_TOKEN=ghp_your_token_here
+```
+
+**Rate Limits:**
+- Without token: 60 requests/hour per IP
+- With token: 5,000 requests/hour per user
+
+The app will work without a token but may hit rate limits with frequent usage.
+
 ## Developing and deploying your app
 
 Check out the [Convex docs](https://docs.convex.dev/) for more information on how to develop with Convex.

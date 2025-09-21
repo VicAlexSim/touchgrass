@@ -54,6 +54,7 @@ const applicationTables = {
       moodScore: v.number(),
       workHoursScore: v.number(),
       breakScore: v.number(),
+      commitPatternsScore: v.optional(v.number()), // based on late night commits, weekend work, etc.
     }),
     notificationSent: v.boolean(),
   }).index("by_user_and_date", ["userId", "date"]),
@@ -67,6 +68,20 @@ const applicationTables = {
     workingHoursEnd: v.number(), // hour of day (0-23)
     targetBreakInterval: v.number(), // minutes between breaks
   }).index("by_user", ["userId"]),
+
+  // GitHub commit tracking
+  githubCommits: defineTable({
+    userId: v.string(),
+    username: v.string(), // GitHub username
+    sha: v.string(), // commit hash
+    message: v.string(),
+    timestamp: v.number(), // commit timestamp
+    repository: v.string(), // repo name
+    additions: v.optional(v.number()),
+    deletions: v.optional(v.number()),
+    filesChanged: v.optional(v.number()),
+  }).index("by_user_and_time", ["userId", "timestamp"])
+    .index("by_username", ["username"]),
 };
 
 export default defineSchema({

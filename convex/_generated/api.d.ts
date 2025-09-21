@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as burnout from "../burnout.js";
+import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as linear from "../linear.js";
 import type * as router from "../router.js";
@@ -29,6 +30,7 @@ import type * as webcam from "../webcam.js";
  */
 declare const fullApi: ApiFromModules<{
   burnout: typeof burnout;
+  github: typeof github;
   http: typeof http;
   linear: typeof linear;
   router: typeof router;
