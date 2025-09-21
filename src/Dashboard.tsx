@@ -5,26 +5,31 @@ import { RiskScoreCard } from "./components/RiskScoreCard";
 import { VelocityChart } from "./components/VelocityChart";
 import { MoodChart } from "./components/MoodChart";
 import { WorkHoursChart } from "./components/WorkHoursChart";
-import { WebcamMonitor } from "./components/WebcamMonitor";
 import { LinearIntegration } from "./components/LinearIntegration";
 import { Settings } from "./components/Settings";
+import { NewerWebcamMonitor } from "./components/NewerWebcamMonitor";
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<"overview" | "integrations" | "settings">("overview");
-  
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "integrations" | "settings"
+  >("overview");
+
   const currentRisk = useQuery(api.burnout.getCurrentRiskScore);
   const velocityMetrics = useQuery(api.linear.getVelocityMetrics, { days: 30 });
   const moodAnalytics = useQuery(api.webcam.getMoodAnalytics, { days: 7 });
   const workHours = useQuery(api.webcam.getWorkSessionAnalytics, { days: 7 });
   const burnoutHistory = useQuery(api.burnout.getBurnoutHistory, { days: 30 });
-  
+
   const calculateBurnout = useAction(api.burnout.calculateBurnoutScore);
 
   // Auto-calculate burnout score every 5 minutes
   useEffect(() => {
-    const interval = setInterval(() => {
-      calculateBurnout().catch(console.error);
-    }, 5 * 60 * 1000);
+    const interval = setInterval(
+      () => {
+        calculateBurnout().catch(console.error);
+      },
+      5 * 60 * 1000
+    );
 
     // Calculate immediately on load
     calculateBurnout().catch(console.error);
@@ -34,14 +39,18 @@ export function Dashboard() {
 
   // Show browser notification if risk is high
   useEffect(() => {
-    if (currentRisk?.riskScore && currentRisk.riskScore >= 75 && !currentRisk.notificationSent) {
+    if (
+      currentRisk?.riskScore &&
+      currentRisk.riskScore >= 75 &&
+      !currentRisk.notificationSent
+    ) {
       if (Notification.permission === "granted") {
         new Notification("TouchGrass Alert", {
           body: `Your burnout risk is ${currentRisk.riskScore}%. Time to take a break and touch some grass! 🌱`,
           icon: "/favicon.ico",
         });
       } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
+        Notification.requestPermission().then((permission) => {
           if (permission === "granted") {
             new Notification("TouchGrass Alert", {
               body: `Your burnout risk is ${currentRisk.riskScore}%. Time to take a break and touch some grass! 🌱`,
@@ -64,11 +73,15 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Burnout Prevention Dashboard</h1>
-          <p className="text-gray-600 mt-1">Monitor your well-being and work patterns</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Burnout Prevention Dashboard
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Monitor your well-being and work patterns
+          </p>
         </div>
-        
-        <WebcamMonitor />
+
+        <NewerWebcamMonitor />
       </div>
 
       {/* Navigation Tabs */}
@@ -95,7 +108,7 @@ export function Dashboard() {
       {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Risk Score */}
-          <RiskScoreCard 
+          <RiskScoreCard
             riskScore={currentRisk?.riskScore || 0}
             factors={currentRisk?.factors}
             loading={currentRisk === undefined}
@@ -103,17 +116,17 @@ export function Dashboard() {
 
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            <VelocityChart 
+            <VelocityChart
               data={velocityMetrics?.velocityData || []}
               loading={velocityMetrics === undefined}
             />
-            
-            <MoodChart 
+
+            <MoodChart
               data={moodAnalytics?.moodTrend || []}
               loading={moodAnalytics === undefined}
             />
-            
-            <WorkHoursChart 
+
+            <WorkHoursChart
               data={workHours?.workHoursTrend || []}
               loading={workHours === undefined}
             />
@@ -122,15 +135,23 @@ export function Dashboard() {
           {/* Burnout History */}
           {burnoutHistory && burnoutHistory.length > 0 && (
             <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Burnout Risk History</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Burnout Risk History
+              </h3>
               <div className="h-64">
                 <div className="flex items-end justify-between h-full space-x-2">
                   {burnoutHistory.slice(-14).map((score, index) => (
-                    <div key={score._id} className="flex flex-col items-center flex-1">
-                      <div 
+                    <div
+                      key={score._id}
+                      className="flex flex-col items-center flex-1"
+                    >
+                      <div
                         className={`w-full rounded-t ${
-                          score.riskScore >= 75 ? 'bg-red-500' :
-                          score.riskScore >= 50 ? 'bg-yellow-500' : 'bg-green-500'
+                          score.riskScore >= 75
+                            ? "bg-red-500"
+                            : score.riskScore >= 50
+                              ? "bg-yellow-500"
+                              : "bg-green-500"
                         }`}
                         style={{ height: `${(score.riskScore / 100) * 200}px` }}
                       />
@@ -149,24 +170,27 @@ export function Dashboard() {
       {activeTab === "integrations" && (
         <div className="space-y-6">
           <LinearIntegration />
-          
+
           <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Twelvelabs Webcam Integration</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Twelvelabs Webcam Integration
+            </h3>
             <p className="text-gray-600 mb-4">
-              Webcam monitoring is automatically enabled. The system analyzes your mood and presence 
-              in real-time using AI-powered video analysis.
+              Webcam monitoring is automatically enabled. The system analyzes
+              your mood and presence in real-time using AI-powered video
+              analysis.
             </p>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Active and monitoring</span>
+              <span className="text-sm text-gray-600">
+                Active and monitoring
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === "settings" && (
-        <Settings />
-      )}
+      {activeTab === "settings" && <Settings />}
     </div>
   );
 }
