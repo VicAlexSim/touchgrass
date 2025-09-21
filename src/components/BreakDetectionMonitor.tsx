@@ -32,7 +32,7 @@ export function BreakDetectionMonitor({ onBreakDetected }: BreakDetectionMonitor
       }
     };
 
-    loadModels();
+    void loadModels();
   }, []);
 
   // Initialize webcam
