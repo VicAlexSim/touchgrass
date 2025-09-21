@@ -21,17 +21,16 @@ const applicationTables = {
     completedAt: v.number(),
     sprintId: v.optional(v.string()),
     cycleId: v.optional(v.string()),
-  }).index("by_user_and_date", ["userId", "completedAt"])
+  })
+    .index("by_user_and_date", ["userId", "completedAt"])
     .index("by_project", ["projectId"]),
 
   // Webcam mood and presence data
   moodData: defineTable({
     userId: v.string(),
     timestamp: v.number(),
-    mood: v.string(), // "happy", "neutral", "stressed", "tired", etc.
-    moodScore: v.number(), // 0-100 scale
-    isPresent: v.boolean(),
-    confidence: v.number(), // confidence in the mood detection
+    isAtDesk: v.boolean(),
+    mood: v.optional(v.number()), // -3 to 3
   }).index("by_user_and_time", ["userId", "timestamp"]),
 
   // Work sessions (continuous presence at desk)

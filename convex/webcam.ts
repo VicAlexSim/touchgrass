@@ -84,10 +84,8 @@ export const processChunk = action({
     await ctx.runMutation(internal.webcam.storeMoodData, {
       userId: userId,
       timestamp: Date.now(),
-      mood: "test",
-      moodScore: dataJson.mood!,
-      isPresent: dataJson.isAtDesk!,
-      confidence: 1,
+      isAtDesk: dataJson.isAtDesk!,
+      mood: dataJson.mood || undefined,
     });
 
     return "success";
@@ -98,10 +96,8 @@ export const storeMoodData = internalMutation({
   args: {
     userId: v.string(),
     timestamp: v.number(),
-    mood: v.string(),
-    moodScore: v.number(),
-    isPresent: v.boolean(),
-    confidence: v.number(),
+    mood: v.optional(v.number()),
+    isAtDesk: v.boolean(),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("moodData", args);
@@ -148,7 +144,7 @@ export const updateWorkSession = internalMutation({
 
         const avgMood =
           sessionMoods.length > 0
-            ? sessionMoods.reduce((sum, m) => sum + m.moodScore, 0) /
+            ? sessionMoods.reduce((sum, m) => sum + (m.mood || 0), 0) /
               sessionMoods.length
             : args.moodScore;
 
@@ -199,7 +195,7 @@ export const getMoodAnalytics = query({
       const day = new Date(mood.timestamp).toISOString().slice(0, 10);
       const current = dailyMood.get(day) || { total: 0, count: 0 };
       dailyMood.set(day, {
-        total: current.total + mood.moodScore,
+        total: current.total + (mood.mood || 0),
         count: current.count + 1,
       });
     });
@@ -266,41 +262,5 @@ export const getWorkSessionAnalytics = query({
       averageHours: Math.round(averageHours * 10) / 10,
       activeSessions: sessions.filter((s) => !s.endTime).length,
     };
-  },
-});
-
-// Generate a short-lived upload URL for webcam clips
-export const generateClipUploadUrl = mutation({
-  args: {},
-  returns: v.string(),
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const userId = identity.subject;
-    return await ctx.storage.generateUploadUrl();
-  },
-});
-
-// Process an uploaded webcam clip on the server (call external APIs here)
-export const processUploadedClip = action({
-  args: {
-    storageId: v.id("_storage"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const userId = identity.subject;
-
-    const blob = await ctx.storage.get(args.storageId);
-    if (!blob) throw new Error("Uploaded clip not found");
-
-    // TODO: Integrate Twelve Labs here using a server-side API key.
-    // Example (pseudo):
-    // const client = new TwelveLabs({ apiKey: process.env.TWELVE_LABS_API_KEY! });
-    // await client.tasks.create({ indexId: userId, videoFile: blob });
-
-    console.log("Received webcam clip for user:", userId, "size:", blob.size);
-    return null;
   },
 });
