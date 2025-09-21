@@ -1,11 +1,10 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
 
 const applicationTables = {
   // Linear integration data
   linearProjects: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     projectId: v.string(),
     projectName: v.string(),
     teamId: v.string(),
@@ -15,7 +14,7 @@ const applicationTables = {
 
   // Story points and velocity tracking
   storyPoints: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     projectId: v.string(),
     issueId: v.string(),
     points: v.number(),
@@ -27,7 +26,7 @@ const applicationTables = {
 
   // Webcam mood and presence data
   moodData: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     timestamp: v.number(),
     mood: v.string(), // "happy", "neutral", "stressed", "tired", etc.
     moodScore: v.number(), // 0-100 scale
@@ -37,7 +36,7 @@ const applicationTables = {
 
   // Work sessions (continuous presence at desk)
   workSessions: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     startTime: v.number(),
     endTime: v.optional(v.number()),
     duration: v.optional(v.number()), // in minutes
@@ -47,7 +46,7 @@ const applicationTables = {
 
   // Burnout risk scores
   burnoutScores: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     date: v.string(), // YYYY-MM-DD format
     riskScore: v.number(), // 0-100 scale
     factors: v.object({
@@ -61,7 +60,7 @@ const applicationTables = {
 
   // User settings and preferences
   userSettings: defineTable({
-    userId: v.id("users"),
+    userId: v.string(),
     riskThreshold: v.number(), // 0-100, default 75
     notificationsEnabled: v.boolean(),
     workingHoursStart: v.number(), // hour of day (0-23)
@@ -71,6 +70,5 @@ const applicationTables = {
 };
 
 export default defineSchema({
-  ...authTables,
   ...applicationTables,
 });

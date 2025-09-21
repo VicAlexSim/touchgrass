@@ -1,5 +1,5 @@
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+import { Authenticated, Unauthenticated } from "convex/react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
 import { Toaster } from "sonner";
@@ -28,9 +28,10 @@ export default function App() {
 }
 
 function Content() {
-  const loggedInUser = useQuery(api.auth.loggedInUser);
+  const { user, isLoading } = useAuth0();
+  console.log(user);
 
-  if (loggedInUser === undefined) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -43,7 +44,7 @@ function Content() {
       <Authenticated>
         <Dashboard />
       </Authenticated>
-      
+
       <Unauthenticated>
         <div className="flex flex-col items-center justify-center min-h-[500px] text-center">
           <div className="mb-8">
@@ -51,15 +52,15 @@ function Content() {
               Prevent Developer Burnout
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl">
-              TouchGrass monitors your work patterns, mood, and velocity to help you 
+              TouchGrass monitors your work patterns, mood, and velocity to help you
               maintain a healthy work-life balance and avoid burnout.
             </p>
           </div>
-          
+
           <div className="w-full max-w-md">
             <SignInForm />
           </div>
-          
+
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -70,7 +71,7 @@ function Content() {
                 Track your velocity and story points to identify overwork patterns
               </p>
             </div>
-            
+
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 📹
@@ -80,7 +81,7 @@ function Content() {
                 AI-powered webcam analysis to detect stress and fatigue levels
               </p>
             </div>
-            
+
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 🔔
