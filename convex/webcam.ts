@@ -61,9 +61,10 @@ export const processChunk = action({
       throw new Error("Video URL is null");
     }
 
+
     const createTaskResponse = await client.tasks.create({
       indexId: "68cf5bc93f033d1477504725",
-      videoUrl: videoUrl,
+      videoUrl,
       // enableVideoStream: true,
     });
     console.log(`Created task: id=${createTaskResponse.id}`);

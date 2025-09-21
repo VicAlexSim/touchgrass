@@ -59,28 +59,36 @@ export function NewerWebcamMonitor() {
 
     // Check if video is long enough (minimum 5 seconds for TwelveLabs)
     const recordingDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
-    console.log(`Recording duration: ${recordingDuration}s, blob size: ${blob.size}`);
+    console.log(`Recording duration: ${recordingDuration}s, blob size: ${blob.size}, type: ${blob.type}`);
     
-    if (recordingDuration < 5 || blob.size < 10000) { // Min 5 seconds and reasonable file size
+    if (recordingDuration < 5 || blob.size < 100000) { // Min 5 seconds and 100KB file size
       console.log("Video too short or too small, skipping TwelveLabs processing");
       setRecordingState('idle');
       return;
     }
 
+    // Create a proper video file with duration metadata
+    const videoFile = new File([blob], `webcam-${Date.now()}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`, {
+      type: blob.type,
+      lastModified: Date.now()
+    });
+
     setIsProcessing(true);
     setRecordingState('processing');
 
     try {
-      console.log("Processing video chunk - duration:", recordingDuration, "size:", blob.size);
+      console.log("Processing video chunk - duration:", recordingDuration, "size:", videoFile.size, "type:", videoFile.type);
       
       // Generate upload URL
       const postUrl = await generateUploadUrl();
 
-      // Upload to Convex storage
+      
+
+      // Upload to Convex storage using the video file
       const result = await fetch(postUrl, {
         method: "POST",
-        headers: { "Content-Type": blob.type },
-        body: blob,
+        headers: { "Content-Type": videoFile.type },
+        body: videoFile,
       });
 
       if (!result.ok) {
@@ -108,12 +116,12 @@ export function NewerWebcamMonitor() {
     previewStream,
     clearBlobUrl,
   } = useReactMediaRecorder({
-    video: { 
-      width: 320,  // Reduced from 640 for better performance
-      height: 240, // Reduced from 480 for better performance
-      frameRate: 15, // Lower frame rate to reduce lag
-    },
     audio: false,
+    video: true,
+    blobPropertyBag: { type: 'video/mp4; codecs="avc1.424028"' },
+    mediaRecorderOptions: {
+      mimeType: 'video/mp4; codecs="avc1.424028"'
+    },
     onStart: () => {
       recordingStartTimeRef.current = Date.now();
       setRecordingState('recording');
@@ -142,9 +150,10 @@ export function NewerWebcamMonitor() {
   // 10-second recording intervals
   useEffect(() => {
     if (recordingState === 'recording') {
-      // Stop recording after 10 seconds
+      // Stop recording after exactly 10 seconds
       const timer = setTimeout(() => {
-        console.log("10 seconds elapsed, stopping recording");
+        const actualDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
+        console.log(`Stopping recording after ${actualDuration}s`);
         stopRecording();
       }, 10000);
       
