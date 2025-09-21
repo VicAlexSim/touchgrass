@@ -6,33 +6,33 @@ import { VelocityChart } from "./components/VelocityChart";
 import { MoodChart } from "./components/MoodChart";
 import { WorkHoursChart } from "./components/WorkHoursChart";
 import { WakatimeChart } from "./components/WakatimeChart";
-import { WebcamMonitor } from "./components/WebcamMonitor";
 import { LinearIntegration } from "./components/LinearIntegration";
 import { WakatimeIntegration } from "./components/WakatimeIntegration";
 import { Settings } from "./components/Settings";
 import { CommitChart } from "./components/CommitChart";
 import { BurnoutHistoryChart } from "./components/BurnoutHistoryChart";
 import { TimeRangeFilter, TimeRange } from "./components/TimeRangeFilter";
-
+import { NewerWebcamMonitor } from "./components/NewerWebcamMonitor";
+import { BreakDetectionMonitor } from "./components/BreakDetectionMonitor";
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "integrations" | "settings">("overview");
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
-  
   const currentRisk = useQuery(api.burnout.getCurrentRiskScore);
   const velocityMetrics = useQuery(api.linear.getVelocityMetrics, { days: 30 });
   const moodAnalytics = useQuery(api.webcam.getMoodAnalytics, { days: 7 });
   const workHours = useQuery(api.webcam.getWorkSessionAnalytics, { days: 7 });
   const burnoutHistory = useQuery(api.burnout.getBurnoutHistory, { days: 30 });
-  const wakatimeAnalytics = useQuery(api.wakatime.getWakatimeAnalytics, { days: timeRange });
-  
   const calculateBurnout = useAction(api.burnout.calculateBurnoutScore);
 
   // Auto-calculate burnout score every 5 minutes
   useEffect(() => {
-    const interval = setInterval(() => {
-      calculateBurnout().catch(console.error);
-    }, 5 * 60 * 1000);
+    const interval = setInterval(
+      () => {
+        calculateBurnout().catch(console.error);
+      },
+      5 * 60 * 1000
+    );
 
     // Calculate immediately on load
     calculateBurnout().catch(console.error);
@@ -42,14 +42,18 @@ export function Dashboard() {
 
   // Show browser notification if risk is high
   useEffect(() => {
-    if (currentRisk?.riskScore && currentRisk.riskScore >= 75 && !currentRisk.notificationSent) {
+    if (
+      currentRisk?.riskScore &&
+      currentRisk.riskScore >= 75 &&
+      !currentRisk.notificationSent
+    ) {
       if (Notification.permission === "granted") {
         new Notification("TouchGrass Alert", {
           body: `Your burnout risk is ${currentRisk.riskScore}%. Time to take a break and touch some grass! 🌱`,
           icon: "/favicon.ico",
         });
       } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
+        Notification.requestPermission().then((permission) => {
           if (permission === "granted") {
             new Notification("TouchGrass Alert", {
               body: `Your burnout risk is ${currentRisk.riskScore}%. Time to take a break and touch some grass! 🌱`,
@@ -72,13 +76,18 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Burnout Prevention Dashboard</h1>
-          <p className="text-gray-600 mt-1">Monitor your well-being and work patterns</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Burnout Prevention Dashboard
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Monitor your well-being and work patterns
+          </p>
         </div>
 
         <div className="flex items-center gap-4">
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
-          <WebcamMonitor />
+          <BreakDetectionMonitor />
+          <NewerWebcamMonitor />
         </div>
       </div>
 
@@ -106,7 +115,7 @@ export function Dashboard() {
       {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Risk Score */}
-          <RiskScoreCard 
+          <RiskScoreCard
             riskScore={currentRisk?.riskScore || 0}
             factors={currentRisk?.factors}
             loading={currentRisk === undefined}
@@ -122,6 +131,13 @@ export function Dashboard() {
             <MoodChart
               data={moodAnalytics?.moodTrend || []}
               loading={moodAnalytics === undefined}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+            <WorkHoursChart
+              data={workHours?.workHoursTrend || []}
+              loading={workHours === undefined}
             />
           </div>
 
@@ -155,22 +171,29 @@ export function Dashboard() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Twelvelabs Webcam Integration</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Hybrid Webcam Monitoring
+            </h3>
             <p className="text-gray-600 mb-4">
-              Webcam monitoring is automatically enabled. The system analyzes your mood and presence
-              in real-time using AI-powered video analysis.
+              Dual-layer webcam monitoring combines face-api.js for real-time break detection 
+              with TwelveLabs AI for advanced mood analysis. The system tracks when you step 
+              away from your desk and analyzes your emotional state for comprehensive burnout prevention.
             </p>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Active and monitoring</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Face-API.js break detection active</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">TwelveLabs mood analysis active</span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === "settings" && (
-        <Settings />
-      )}
+      {activeTab === "settings" && <Settings />}
     </div>
   );
 }

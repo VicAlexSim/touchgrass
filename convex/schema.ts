@@ -21,17 +21,21 @@ const applicationTables = {
     completedAt: v.optional(v.number()), // undefined for active issues, timestamp for completed
     sprintId: v.optional(v.string()),
     cycleId: v.optional(v.string()),
-  }).index("by_user_and_date", ["userId", "completedAt"])
+  })
+    .index("by_user_and_date", ["userId", "completedAt"])
     .index("by_project", ["projectId"]),
 
   // Webcam mood and presence data
   moodData: defineTable({
     userId: v.string(),
     timestamp: v.number(),
-    mood: v.string(), // "happy", "neutral", "stressed", "tired", etc.
-    moodScore: v.number(), // 0-100 scale
-    isPresent: v.boolean(),
-    confidence: v.number(), // confidence in the mood detection
+    // Face-api.js fields
+    isAtDesk: v.optional(v.boolean()),
+    // TwelveLabs fields  
+    isPresent: v.optional(v.boolean()),
+    mood: v.optional(v.union(v.number(), v.string())), // -3 to 3 for face-api or string for TwelveLabs
+    moodScore: v.optional(v.number()), // TwelveLabs numerical mood score
+    confidence: v.optional(v.number()), // TwelveLabs confidence score
   }).index("by_user_and_time", ["userId", "timestamp"]),
 
   // Work sessions (continuous presence at desk)
