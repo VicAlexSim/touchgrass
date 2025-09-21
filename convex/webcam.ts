@@ -25,12 +25,20 @@ export const updateBreakStatus = mutation({
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.subject;
 
-    return await ctx.db.insert("moodData", {
+    // Store mood data first
+    await ctx.db.insert("moodData", {
       userId,
       timestamp: args.timestamp,
       isAtDesk: args.isAtDesk,
       isPresent: args.isAtDesk, // For backwards compatibility
       mood: undefined, // Face-api.js doesn't provide mood in this context
+    });
+
+    // Process break tracking
+    await ctx.runMutation(internal.breaks.processBreakStatus, {
+      userId,
+      isAtDesk: args.isAtDesk,
+      timestamp: args.timestamp,
     });
   },
 });

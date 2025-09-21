@@ -3,8 +3,7 @@ import { api } from "../convex/_generated/api";
 import { useState, useEffect } from "react";
 import { RiskScoreCard } from "./components/RiskScoreCard";
 import { VelocityChart } from "./components/VelocityChart";
-import { MoodChart } from "./components/MoodChart";
-import { WorkHoursChart } from "./components/WorkHoursChart";
+import { DailyMoodChart } from "./components/DailyMoodChart";
 import { WakatimeChart } from "./components/WakatimeChart";
 import { LinearIntegration } from "./components/LinearIntegration";
 import { WakatimeIntegration } from "./components/WakatimeIntegration";
@@ -15,6 +14,7 @@ import { TimeRangeFilter, TimeRange } from "./components/TimeRangeFilter";
 import { NewerWebcamMonitor } from "./components/NewerWebcamMonitor";
 import { BreakDetectionMonitor } from "./components/BreakDetectionMonitor";
 import { PDFExport } from "./components/PDFExport";
+import { BreakStats } from "./components/BreakStats";
 
 
 export function Dashboard() {
@@ -23,7 +23,6 @@ export function Dashboard() {
   const currentRisk = useQuery(api.burnout.getCurrentRiskScore);
   const velocityMetrics = useQuery(api.linear.getVelocityMetrics, { days: 30 });
   const moodAnalytics = useQuery(api.webcam.getMoodAnalytics, { days: 7 });
-  const workHours = useQuery(api.webcam.getWorkSessionAnalytics, { days: 7 });
   const burnoutHistory = useQuery(api.burnout.getBurnoutHistory, { days: 30 });
   const calculateBurnout = useAction(api.burnout.calculateBurnoutScore);
 
@@ -88,7 +87,6 @@ export function Dashboard() {
 
         <div className="flex items-center gap-4">
           <PDFExport />
-          <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           <BreakDetectionMonitor />
           <NewerWebcamMonitor />
         </div>
@@ -117,6 +115,11 @@ export function Dashboard() {
       {/* Tab Content */}
       {activeTab === "overview" && (
         <div className="space-y-6">
+          {/* Time Range Filter */}
+          <div className="flex justify-end">
+            <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
+          </div>
+          
           {/* Risk Score */}
           <RiskScoreCard
             riskScore={currentRisk?.riskScore || 0}
@@ -131,22 +134,18 @@ export function Dashboard() {
               loading={velocityMetrics === undefined}
             />
 
-            <MoodChart
+            <DailyMoodChart
               data={moodAnalytics?.moodTrend || []}
               loading={moodAnalytics === undefined}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
-            <WorkHoursChart
-              data={workHours?.workHoursTrend || []}
-              loading={workHours === undefined}
             />
           </div>
 
           {/* Wakatime Chart */}
           <WakatimeChart days={timeRange} />
           <CommitChart days={timeRange} />
+
+          {/* Break Statistics */}
+          <BreakStats />
 
           {/* Burnout History */}
           <BurnoutHistoryChart

@@ -54,12 +54,44 @@ const applicationTables = {
     date: v.string(), // YYYY-MM-DD format
     riskScore: v.number(), // 0-100 scale
     factors: v.object({
+      // Core burnout factor scores
       velocityScore: v.number(),
       moodScore: v.number(),
       workHoursScore: v.number(),
       breakScore: v.number(),
-      commitPatternsScore: v.optional(v.number()), // based on late night commits, weekend work, etc.
-      wakatimeScore: v.optional(v.number()), // based on coding time patterns and intensity
+      commitPatternsScore: v.optional(v.number()),
+      wakatimeScore: v.optional(v.number()),
+
+      // Analysis metadata
+      dataAvailability: v.object({
+        hasVelocityData: v.boolean(),
+        hasMoodData: v.boolean(),
+        hasWorkHoursData: v.boolean(),
+        hasBreakData: v.boolean(),
+        hasCommitData: v.boolean(),
+        hasWakatimeData: v.boolean(),
+      }),
+      appliedWeights: v.object({
+        velocityScore: v.number(),
+        moodScore: v.number(),
+        workHoursScore: v.number(),
+        breakScore: v.number(),
+        commitPatternsScore: v.number(),
+        wakatimeScore: v.number(),
+      }),
+      trendModifier: v.number(),
+      severityModifier: v.number(),
+      availableDataSources: v.number(),
+
+      // Factor descriptions for UI
+      factorDescriptions: v.object({
+        velocityScore: v.string(),
+        moodScore: v.string(),
+        workHoursScore: v.string(),
+        breakScore: v.string(),
+        commitPatternsScore: v.string(),
+        wakatimeScore: v.string(),
+      }),
     }),
     notificationSent: v.boolean(),
   }).index("by_user_and_date", ["userId", "date"]),
@@ -115,6 +147,18 @@ const applicationTables = {
     }))),
     lastUpdated: v.number(),
   }).index("by_user_and_date", ["userId", "date"]),
+
+  // Enhanced break tracking with timer functionality
+  breaks: defineTable({
+    userId: v.string(),
+    startTime: v.number(), // When break started
+    endTime: v.optional(v.number()), // When break ended
+    duration: v.optional(v.number()), // Duration in seconds
+    isValidBreak: v.boolean(), // Whether break duration >= 1 minute
+    workSessionId: v.optional(v.id("workSessions")), // Associated work session
+    date: v.string(), // YYYY-MM-DD format for daily aggregation
+  }).index("by_user_and_date", ["userId", "date"])
+    .index("by_work_session", ["workSessionId"]),
 };
 
 export default defineSchema({

@@ -83,9 +83,9 @@ export const fetchGitHubCommits = action({
                     `https://api.github.com/users/${args.username}/repos?sort=updated&per_page=30`, // Most recently updated
                     `https://api.github.com/users/${args.username}/repos?sort=created&per_page=20`  // Most recently created
                 ];
-                
+
                 const allRepos = new Set();
-                
+
                 for (const repoQuery of repoQueries) {
                     try {
                         const reposResponse = await fetch(repoQuery, { headers });
@@ -98,14 +98,14 @@ export const fetchGitHubCommits = action({
                         console.warn(`Failed to fetch repos from ${repoQuery}:`, error);
                     }
                 }
-                
+
                 const userRepos = Array.from(allRepos).map(repoStr => JSON.parse(repoStr as string));
                 console.log(`Found ${userRepos.length} unique repositories for ${args.username} across all queries`);
                 console.log(`Private repos included: ${githubToken ? 'YES' : 'NO'}`);
 
                 // Get commits from user's repositories, focusing on recently active ones
                 console.log('Repository list:', userRepos.map(r => `${r.name} (${r.private ? 'private' : 'public'}, pushed: ${r.pushed_at})`).join(', '));
-                
+
                 for (const repo of userRepos) {
                     console.log(`Processing repository: ${repo.name} (last pushed: ${repo.pushed_at})`);
                     try {
@@ -113,81 +113,81 @@ export const fetchGitHubCommits = action({
                         let hasMoreCommits = true;
                         let repoCommitCount = 0;
 
-              // Fetch commits with pagination - focus on recent commits
-              // Get commits from the last 60 days to ensure we capture recent activity
-              const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-              
-              while (hasMoreCommits && page <= 5) { // Increased to 5 pages to get more recent commits
-                                const response = await fetch(
-                                    `https://api.github.com/repos/${args.username}/${repo.name}/commits?per_page=100&page=${page}&author=${args.username}&since=${since}`,
-                                    { headers }
-                                );
+                        // Fetch commits with pagination - focus on recent commits
+                        // Get commits from the last 60 days to ensure we capture recent activity
+                        const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
-                                if (response.ok) {
-                                    const repoCommits = await response.json();
+                        while (hasMoreCommits && page <= 5) { // Increased to 5 pages to get more recent commits
+                            const response = await fetch(
+                                `https://api.github.com/repos/${args.username}/${repo.name}/commits?per_page=100&page=${page}&author=${args.username}&since=${since}`,
+                                { headers }
+                            );
 
-                                    if (repoCommits.length === 0) {
-                                        hasMoreCommits = false;
-                                    } else {
-                                        repoCommitCount += repoCommits.length;
+                            if (response.ok) {
+                                const repoCommits = await response.json();
 
-                                        for (const commit of repoCommits) {
-                                            if (commit.commit.author && commit.commit.author.date) {
-                                                const commitData: any = {
-                                                    sha: commit.sha,
-                                                    message: commit.commit.message,
-                                                    timestamp: new Date(commit.commit.author.date).getTime(),
-                                                    repository: repo.name,
-                                                };
-
-                                                // Only include optional fields if they have actual values
-                                                if (commit.stats?.additions !== undefined) {
-                                                    commitData.additions = commit.stats.additions;
-                                                }
-                                                if (commit.stats?.deletions !== undefined) {
-                                                    commitData.deletions = commit.stats.deletions;
-                                                }
-                                                if (commit.files?.length !== undefined) {
-                                                    commitData.filesChanged = commit.files.length;
-                                                }
-
-                                                commits.push(commitData);
-                                            }
-                                        }
-                                        page++;
-                                    }
-                                } else {
-                                    console.warn(`Failed to fetch commits for ${repo.name} (page ${page}): ${response.status}`);
+                                if (repoCommits.length === 0) {
                                     hasMoreCommits = false;
-                                }
-                            }
+                                } else {
+                                    repoCommitCount += repoCommits.length;
 
-                            console.log(`Found ${repoCommitCount} total commits in ${repo.name}`);
-                        } catch (error) {
-                            console.warn(`Error fetching commits for ${repo.name}:`, error);
+                                    for (const commit of repoCommits) {
+                                        if (commit.commit.author && commit.commit.author.date) {
+                                            const commitData: any = {
+                                                sha: commit.sha,
+                                                message: commit.commit.message,
+                                                timestamp: new Date(commit.commit.author.date).getTime(),
+                                                repository: repo.name,
+                                            };
+
+                                            // Only include optional fields if they have actual values
+                                            if (commit.stats?.additions !== undefined) {
+                                                commitData.additions = commit.stats.additions;
+                                            }
+                                            if (commit.stats?.deletions !== undefined) {
+                                                commitData.deletions = commit.stats.deletions;
+                                            }
+                                            if (commit.files?.length !== undefined) {
+                                                commitData.filesChanged = commit.files.length;
+                                            }
+
+                                            commits.push(commitData);
+                                        }
+                                    }
+                                    page++;
+                                }
+                            } else {
+                                console.warn(`Failed to fetch commits for ${repo.name} (page ${page}): ${response.status}`);
+                                hasMoreCommits = false;
+                            }
                         }
+
+                        console.log(`Found ${repoCommitCount} total commits in ${repo.name}`);
+                    } catch (error) {
+                        console.warn(`Error fetching commits for ${repo.name}:`, error);
                     }
+                }
             } catch (error) {
                 console.error("Error fetching user repositories:", error);
             }
 
-      // Sort all commits by timestamp (newest first) - this gives us commits by updated date
-      commits.sort((a, b) => b.timestamp - a.timestamp);
-      
-      // Limit total commits to prevent database overload (keep most recent)
-      const maxCommits = 2000; // Increased limit to capture more recent activity
-      if (commits.length > maxCommits) {
-        const originalLength = commits.length;
-        commits.splice(maxCommits); // Remove excess commits
-        console.log(`Limited to ${maxCommits} most recent commits out of ${originalLength} total`);
-      }
-      
-      console.log(`Total commits fetched: ${commits.length}`);
-      if (commits.length > 0) {
-        const oldestCommit = new Date(Math.min(...commits.map(c => c.timestamp)));
-        const newestCommit = new Date(Math.max(...commits.map(c => c.timestamp)));
-        console.log(`Date range: ${oldestCommit.toISOString().split('T')[0]} to ${newestCommit.toISOString().split('T')[0]}`);
-      }
+            // Sort all commits by timestamp (newest first) - this gives us commits by updated date
+            commits.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Limit total commits to prevent database overload (keep most recent)
+            const maxCommits = 2000; // Increased limit to capture more recent activity
+            if (commits.length > maxCommits) {
+                const originalLength = commits.length;
+                commits.splice(maxCommits); // Remove excess commits
+                console.log(`Limited to ${maxCommits} most recent commits out of ${originalLength} total`);
+            }
+
+            console.log(`Total commits fetched: ${commits.length}`);
+            if (commits.length > 0) {
+                const oldestCommit = new Date(Math.min(...commits.map(c => c.timestamp)));
+                const newestCommit = new Date(Math.max(...commits.map(c => c.timestamp)));
+                console.log(`Date range: ${oldestCommit.toISOString().split('T')[0]} to ${newestCommit.toISOString().split('T')[0]}`);
+            }
 
             // Store commits in database using mutation
             if (commits.length > 0) {
@@ -224,29 +224,29 @@ export const storeCommits = internalMutation({
             filesChanged: v.optional(v.number()),
         })),
     },
-  handler: async (ctx, args) => {
-    // First, get all existing commit SHAs for this user to avoid duplicates
-    const existingCommits = await ctx.db
-      .query("githubCommits")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
-      .collect();
+    handler: async (ctx, args) => {
+        // First, get all existing commit SHAs for this user to avoid duplicates
+        const existingCommits = await ctx.db
+            .query("githubCommits")
+            .withIndex("by_username", (q) => q.eq("username", args.username))
+            .collect();
 
-    const existingSHAs = new Set(existingCommits.map(commit => commit.sha));
-    
-    // Filter out commits that already exist
-    const newCommits = args.commits.filter(commit => !existingSHAs.has(commit.sha));
-    
-    console.log(`Filtering ${args.commits.length} commits: ${existingCommits.length} existing, ${newCommits.length} new`);
+        const existingSHAs = new Set(existingCommits.map(commit => commit.sha));
 
-    // Insert only new commits
-    for (const commit of newCommits) {
-      await ctx.db.insert("githubCommits", {
-        userId: args.userId,
-        username: args.username,
-        ...commit,
-      });
-    }
-  },
+        // Filter out commits that already exist
+        const newCommits = args.commits.filter(commit => !existingSHAs.has(commit.sha));
+
+        console.log(`Filtering ${args.commits.length} commits: ${existingCommits.length} existing, ${newCommits.length} new`);
+
+        // Insert only new commits
+        for (const commit of newCommits) {
+            await ctx.db.insert("githubCommits", {
+                userId: args.userId,
+                username: args.username,
+                ...commit,
+            });
+        }
+    },
 });
 
 // Get commit analytics for dashboard
@@ -290,23 +290,9 @@ export const getGitHubCommitAnalytics = query({
             )
             .collect();
 
-        console.log(`Found ${allCommits.length} total commits in database for userId: ${userId}`);
-
-        // Debug: Show data summary
-        if (allCommits.length > 0) {
-          const sortedCommits = [...allCommits].sort((a, b) => b.timestamp - a.timestamp);
-          const mostRecent = new Date(sortedCommits[0].timestamp);
-          const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-          const recentCommits = allCommits.filter(commit => commit.timestamp >= thirtyDaysAgo);
-
-          console.log(`Most recent commit: ${mostRecent.toISOString()} (${mostRecent.toLocaleDateString()})`);
-          console.log(`Commits in last 30 days: ${recentCommits.length}`);
-        }
 
         // Filter by time range for analytics (but keep more data for better patterns)
         const commits = allCommits.filter(commit => commit.timestamp >= since);
-        
-        console.log(`Using ${commits.length} commits from last ${days} days for analytics`);
 
         // Initialize patterns
         const weeklyPattern: Record<string, number> = {
@@ -347,9 +333,6 @@ export const getGitHubCommitAnalytics = query({
         const recentCommitTrend: Array<{ date: string; commits: number }> = [];
         const now = Date.now();
 
-        console.log(`Calculating recent trend for last ${days} days...`);
-        console.log('Total commits available for trend calculation:', commits.length);
-
         for (let i = days - 1; i >= 0; i--) {
             const date = new Date(now - i * 24 * 60 * 60 * 1000);
             const dateStr = date.toISOString().split('T')[0];
@@ -359,20 +342,14 @@ export const getGitHubCommitAnalytics = query({
                 return commitDate === dateStr;
             });
 
-            if (dayCommits.length > 0) {
-                console.log(`Found ${dayCommits.length} commits on ${dateStr}`);
-            }
 
             recentCommitTrend.push({
                 date: dateStr,
                 commits: dayCommits.length,
             });
         }
-        
-        const totalRecentCommits = recentCommitTrend.reduce((sum, day) => sum + day.commits, 0);
-        console.log(`Recent trend: ${totalRecentCommits} total commits across ${days} days`);
 
-        const result = {
+        return {
             weeklyPattern,
             hourlyPattern,
             lateNightCommits,
@@ -381,15 +358,6 @@ export const getGitHubCommitAnalytics = query({
             averageCommitsPerDay: commits.length / days,
             recentCommitTrend,
         };
-
-        console.log('Analytics result:', {
-            totalCommits: result.totalCommits,
-            lateNightCommits: result.lateNightCommits,
-            weekendCommits: result.weekendCommits,
-            averageCommitsPerDay: result.averageCommitsPerDay
-        });
-
-        return result;
     },
 });
 

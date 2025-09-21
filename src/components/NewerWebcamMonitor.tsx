@@ -20,8 +20,8 @@ const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
 
   if (!stream) {
     return (
-      <div className="w-[120px] h-[90px] bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
-        <span className="text-xs text-gray-500">No Video</span>
+      <div className="w-[240px] h-[180px] bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
+        <span className="text-sm text-gray-500">No Video</span>
       </div>
     );
   }
@@ -29,12 +29,12 @@ const VideoPreview = ({ stream }: { stream: MediaStream | null }) => {
   return (
     <video 
       ref={videoRef} 
-      width={120} 
-      height={90} 
+      width={240} 
+      height={180} 
       autoPlay 
       muted 
       playsInline
-      className="rounded-lg border-2 border-gray-300 object-cover"
+      className="rounded-lg border-2 border-gray-300 object-cover shadow-lg"
       style={{ 
         transform: 'scaleX(-1)', // Mirror the video for better UX
         WebkitTransform: 'scaleX(-1)'
@@ -211,14 +211,14 @@ export function NewerWebcamMonitor() {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative">
+    <div className="flex flex-col gap-3">
+      <div className="relative inline-block">
         <VideoPreview stream={previewStream} />
-        <div className={`absolute -top-1 -right-1 w-3 h-3 ${getStatusColor()} rounded-full border-2 border-white`} />
+        <div className={`absolute top-2 right-2 w-4 h-4 ${getStatusColor()} rounded-full border-2 border-white shadow-lg`} />
       </div>
-      <div className="text-sm">
-        <div className="font-medium text-gray-900">TwelveLabs Analysis</div>
-        <div className="text-gray-600">{getStatusText()}</div>
+      <div className="text-center">
+        <div className="font-medium text-gray-900">TwelveLabs AI Analysis</div>
+        <div className="text-gray-600 text-sm">{getStatusText()}</div>
       </div>
     </div>
   );

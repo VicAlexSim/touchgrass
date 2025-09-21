@@ -90,7 +90,7 @@ export function RiskScoreCard({ riskScore, factors, loading }: RiskScoreCardProp
       </div>
 
       {factors && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
           <div className="text-center">
             <div className="text-xl font-bold text-gray-900">{factors.velocityScore}</div>
             <div className="text-xs text-gray-600">Velocity</div>
@@ -102,10 +102,6 @@ export function RiskScoreCard({ riskScore, factors, loading }: RiskScoreCardProp
           <div className="text-center">
             <div className="text-xl font-bold text-gray-900">{factors.workHoursScore}</div>
             <div className="text-xs text-gray-600">Work Hours</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-gray-900">{factors.breakScore}</div>
-            <div className="text-xs text-gray-600">Breaks</div>
           </div>
           <div className="text-center">
             <div className="text-xl font-bold text-gray-900">{Math.round(factors.commitPatternsScore ?? 0)}</div>

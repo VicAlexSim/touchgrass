@@ -64,15 +64,56 @@ export const createSampleData = internalMutation({
       const date = new Date(now - (i * oneDay)).toISOString().slice(0, 10);
       const riskScore = Math.floor(Math.random() * 60) + 20; // 20-80 risk score
       
+      const velocityScore = Math.floor(Math.random() * 50) + 25;
+      const moodScore = Math.floor(Math.random() * 40) + 30;
+      const workHoursScore = Math.floor(Math.random() * 60) + 20;
+      const breakScore = Math.floor(Math.random() * 30) + 10;
+      const commitPatternsScore = Math.floor(Math.random() * 40) + 10;
+      const wakatimeScore = Math.floor(Math.random() * 35) + 15;
+      
       await ctx.db.insert("burnoutScores", {
         userId,
         date,
         riskScore,
         factors: {
-          velocityScore: Math.floor(Math.random() * 50) + 25,
-          moodScore: Math.floor(Math.random() * 40) + 30,
-          workHoursScore: Math.floor(Math.random() * 60) + 20,
-          breakScore: Math.floor(Math.random() * 30) + 10,
+          // Core burnout factor scores
+          velocityScore,
+          moodScore,
+          workHoursScore,
+          breakScore,
+          commitPatternsScore,
+          wakatimeScore,
+          
+          // Analysis metadata
+          dataAvailability: {
+            hasVelocityData: true,
+            hasMoodData: true,
+            hasWorkHoursData: true,
+            hasBreakData: true,
+            hasCommitData: true,
+            hasWakatimeData: true,
+          },
+          appliedWeights: {
+            velocityScore: 0.15,
+            moodScore: 0.30,
+            workHoursScore: 0.15,
+            breakScore: 0.10,
+            commitPatternsScore: 0.15,
+            wakatimeScore: 0.15,
+          },
+          trendModifier: 0,
+          severityModifier: 0,
+          availableDataSources: 6,
+          
+          // Factor descriptions for UI
+          factorDescriptions: {
+            velocityScore: "Linear Velocity (Active)",
+            moodScore: "AI Mood Analysis (Active)",
+            workHoursScore: "Work Patterns (Active)",
+            breakScore: "Break Frequency (Active)",
+            commitPatternsScore: "GitHub Activity (Active)",
+            wakatimeScore: "Coding Time (Active)",
+          },
         },
         notificationSent: false,
       });

@@ -75,8 +75,8 @@ export function BreakDetectionMonitor({ onBreakDetected }: BreakDetectionMonitor
         const now = Date.now();
         const hasUser = detections.length > 0;
         
-        // Only update status if it changed or if it's been more than 30 seconds
-        if (isAtDesk !== hasUser || now - lastDetectionTime > 30000) {
+        // Only update status if it changed or if it's been more than 5 seconds (for rate limiting)
+        if (isAtDesk !== hasUser || now - lastDetectionTime > 5000) {
           setIsAtDesk(hasUser);
           setLastDetectionTime(now);
           
@@ -98,8 +98,8 @@ export function BreakDetectionMonitor({ onBreakDetected }: BreakDetectionMonitor
       }
     };
 
-    // Start detection interval - less frequent for better performance
-    intervalRef.current = setInterval(detectFaces, 10000); // Check every 10 seconds
+    // Start detection interval - check every second for responsive break detection
+    intervalRef.current = setInterval(detectFaces, 1000); // Check every 1 second
 
     return () => {
       if (intervalRef.current) {
@@ -131,33 +131,33 @@ export function BreakDetectionMonitor({ onBreakDetected }: BreakDetectionMonitor
   return (
     <div className="flex items-center gap-3">
       <div className="relative">
+        {/* Hidden video for face detection processing */}
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
-          className="w-12 h-12 rounded-full object-cover border-2 border-gray-300"
-          style={{ 
-            transform: 'scaleX(-1)', // Mirror for better UX
-            WebkitTransform: 'scaleX(-1)'
-          }}
+          className="hidden"
           onLoadedMetadata={() => {
             if (videoRef.current) {
               videoRef.current.play().catch(console.error);
             }
           }}
         />
-        <div className={`absolute -top-1 -right-1 w-4 h-4 ${getStatusColor()} rounded-full border-2 border-white`} />
+        
+        {/* Status indicator */}
+        <div className={`w-8 h-8 ${getStatusColor()} rounded-full border-2 border-white flex items-center justify-center`}>
+          <div className="w-2 h-2 bg-white rounded-full"></div>
+        </div>
       </div>
       
       <div className="text-sm">
         <div className="font-medium text-gray-900">Break Detection</div>
         <div className="text-gray-600">{getStatusText()}</div>
+        {!isModelLoaded && (
+          <div className="text-xs text-gray-500">Loading models...</div>
+        )}
       </div>
-      
-      {!isModelLoaded && (
-        <div className="text-xs text-gray-500">Loading models...</div>
-      )}
     </div>
   );
 }
