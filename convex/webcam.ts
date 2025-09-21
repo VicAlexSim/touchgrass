@@ -5,7 +5,7 @@ import { internalMutation } from "./_generated/server";
 import { TwelveLabs } from "twelvelabs-js";
 
 const client = new TwelveLabs({
-  apiKey: "tlk_3Z8XC5Y14KJJ9X25XM4EJ01GEVZ1",
+  apiKey: process.env.TL_API_KEY,
 });
 
 export const generateUploadUrl = mutation({
@@ -68,7 +68,6 @@ export const processChunk = action({
     if (!videoUrl) {
       throw new Error("Video URL is null");
     }
-
 
     const createTaskResponse = await client.tasks.create({
       indexId: "68cf5bc93f033d1477504725",
@@ -188,14 +187,24 @@ export const updateWorkSession = internalMutation({
           .collect();
 
         // Helper function to normalize mood to numeric value
-        const normalizeMood = (moodValue: number | string | undefined): number => {
-          if (typeof moodValue === 'number') return moodValue;
-          if (typeof moodValue === 'string') {
+        const normalizeMood = (
+          moodValue: number | string | undefined
+        ): number => {
+          if (typeof moodValue === "number") return moodValue;
+          if (typeof moodValue === "string") {
             // Map string moods to numeric scale -3 to 3
             const moodMap: Record<string, number> = {
-              'very happy': 3, 'happy': 2, 'content': 1, 'satisfied': 1,
-              'neutral': 0, 'calm': 0,
-              'tired': -1, 'stressed': -2, 'frustrated': -2, 'sad': -3, 'angry': -3
+              "very happy": 3,
+              happy: 2,
+              content: 1,
+              satisfied: 1,
+              neutral: 0,
+              calm: 0,
+              tired: -1,
+              stressed: -2,
+              frustrated: -2,
+              sad: -3,
+              angry: -3,
             };
             return moodMap[moodValue.toLowerCase()] || 0;
           }
@@ -253,13 +262,21 @@ export const getMoodAnalytics = query({
 
     // Helper function to normalize mood to numeric value
     const normalizeMood = (moodValue: number | string | undefined): number => {
-      if (typeof moodValue === 'number') return moodValue;
-      if (typeof moodValue === 'string') {
+      if (typeof moodValue === "number") return moodValue;
+      if (typeof moodValue === "string") {
         // Map string moods to numeric scale -3 to 3
         const moodMap: Record<string, number> = {
-          'very happy': 3, 'happy': 2, 'content': 1, 'satisfied': 1,
-          'neutral': 0, 'calm': 0,
-          'tired': -1, 'stressed': -2, 'frustrated': -2, 'sad': -3, 'angry': -3
+          "very happy": 3,
+          happy: 2,
+          content: 1,
+          satisfied: 1,
+          neutral: 0,
+          calm: 0,
+          tired: -1,
+          stressed: -2,
+          frustrated: -2,
+          sad: -3,
+          angry: -3,
         };
         return moodMap[moodValue.toLowerCase()] || 0;
       }
