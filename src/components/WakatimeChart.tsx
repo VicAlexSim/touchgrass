@@ -183,7 +183,7 @@ export function WakatimeChart({ days = 7 }: WakatimeChartProps) {
           </h4>
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="flex items-end gap-1 h-24">
-              {wakatimeAnalytics.codingTrend.slice(-Math.min(days, 14)).map((day, index) => {
+              {wakatimeAnalytics.codingTrend.slice(-days).map((day, index) => {
                 const maxHeight = 96;
                 const maxHours = Math.max(...wakatimeAnalytics.codingTrend.map(d => d.hours), 1);
                 const height = (day.hours / maxHours) * maxHeight;
@@ -273,23 +273,23 @@ export function WakatimeChart({ days = 7 }: WakatimeChartProps) {
         </div>
 
         {/* Risk Indicators */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="text-xs text-gray-600 space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span>2-6 hours/day - Healthy coding time</span>
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-green-500 rounded"></div>
+              <span>2-6h/day - Healthy</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-orange-500 rounded"></div>
-              <span>6-8 hours/day - Moderate risk</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-orange-500 rounded"></div>
+              <span>6-8h/day - Moderate</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-              <span>8-10 hours/day - High risk</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-yellow-500 rounded"></div>
+              <span>8-10h/day - High risk</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded"></div>
-              <span>10+ hours/day - Very high risk</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 bg-red-500 rounded"></div>
+              <span>10+h/day - Very high</span>
             </div>
           </div>
         </div>

@@ -343,14 +343,14 @@ export const getGitHubCommitAnalytics = query({
             }
         }
 
-        // Calculate recent trend (last 30 days)
+        // Calculate recent trend based on days parameter
         const recentCommitTrend: Array<{ date: string; commits: number }> = [];
         const now = Date.now();
-        
-        console.log('Calculating recent trend for last 30 days...');
+
+        console.log(`Calculating recent trend for last ${days} days...`);
         console.log('Total commits available for trend calculation:', commits.length);
 
-        for (let i = 29; i >= 0; i--) {
+        for (let i = days - 1; i >= 0; i--) {
             const date = new Date(now - i * 24 * 60 * 60 * 1000);
             const dateStr = date.toISOString().split('T')[0];
 
@@ -370,7 +370,7 @@ export const getGitHubCommitAnalytics = query({
         }
         
         const totalRecentCommits = recentCommitTrend.reduce((sum, day) => sum + day.commits, 0);
-        console.log(`Recent trend: ${totalRecentCommits} total commits across 30 days`);
+        console.log(`Recent trend: ${totalRecentCommits} total commits across ${days} days`);
 
         const result = {
             weeklyPattern,

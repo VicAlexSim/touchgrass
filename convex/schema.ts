@@ -18,7 +18,7 @@ const applicationTables = {
     projectId: v.string(),
     issueId: v.string(),
     points: v.number(),
-    completedAt: v.number(),
+    completedAt: v.optional(v.number()), // undefined for active issues, timestamp for completed
     sprintId: v.optional(v.string()),
     cycleId: v.optional(v.string()),
   }).index("by_user_and_date", ["userId", "completedAt"])

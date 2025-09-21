@@ -116,10 +116,7 @@ export const fetchWakatimeData = action({
         const userId = identity.subject;
 
         const range = args.range || "last_7_days";
-        console.log(`Range: ${range}`);
         const endpoint = args.endpoint || "https://wakatime.com/api/v1";
-
-        console.log(`Fetching Wakatime data for range: ${range}`);
 
         try {
             // Get user's coding summary
@@ -131,21 +128,18 @@ export const fetchWakatimeData = action({
                 },
             });
 
-            console.log('Wakatime summary response:', summaryResponse);
 
             if (!summaryResponse.ok) {
                 throw new Error(`Wakatime API error: ${summaryResponse.status} ${summaryResponse.statusText}`);
             }
 
             const summaryData = await summaryResponse.json() as { data: WakatimeSummary[] };
-            console.log('Raw summary data:', JSON.stringify(summaryData, null, 2));
             
             if (!summaryData.data || summaryData.data.length === 0) {
                 throw new Error("No Wakatime data available for the selected range");
             }
             
             const summary = summaryData.data[0];
-            console.log('Parsed summary:', JSON.stringify(summary, null, 2));
 
             // For daily breakdown, use the summaries endpoint with a different range to get daily data
             let dailyCodingHours: Array<{ date: string; hours: number }> = [];
@@ -518,14 +512,6 @@ export const getWakatimeAnalytics = query({
             .withIndex("by_user_and_date", (q) => q.eq("userId", userId))
             .order("desc")
             .take(days);
-
-        console.log(`Found ${dailyData.length} daily data entries for user ${userId}`);
-        console.log('Daily data breakdown:', dailyData.map(d => ({ 
-            date: d.date, 
-            hours: (d.codingTime / 3600).toFixed(2), 
-            languages: d.languages?.length || 0, 
-            projects: d.projects?.length || 0 
-        })));
 
         // Calculate totals and averages
         const totalCodingTime = dailyData.reduce((sum, day) => sum + (day.codingTime || 0), 0);

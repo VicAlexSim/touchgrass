@@ -13,7 +13,7 @@ interface CommitChartProps {
   days?: TimeRange;
 }
 
-export function CommitChart({ days = 30 }: CommitChartProps) {
+export function CommitChart({ days = 7 }: CommitChartProps) {
   const { user } = useAuth0();
   const githubUsername = user?.nickname || user?.name;
   const [isRefreshing, setIsRefreshing] = useState(false);

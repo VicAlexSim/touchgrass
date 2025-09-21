@@ -17,6 +17,7 @@ import type * as burnout from "../burnout.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as linear from "../linear.js";
+import type * as linearActions from "../linearActions.js";
 import type * as router from "../router.js";
 import type * as wakatime from "../wakatime.js";
 import type * as webcam from "../webcam.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   github: typeof github;
   http: typeof http;
   linear: typeof linear;
+  linearActions: typeof linearActions;
   router: typeof router;
   wakatime: typeof wakatime;
   webcam: typeof webcam;

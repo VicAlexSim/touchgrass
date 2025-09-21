@@ -1,5 +1,7 @@
 import { v } from "convex/values";
-import { action, mutation, query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+// Internal functions
+import { internalQuery, internalMutation } from "./_generated/server";
 
 // Store Linear project connection
 export const connectLinearProject = mutation({
@@ -38,92 +40,6 @@ export const connectLinearProject = mutation({
   },
 });
 
-// Fetch velocity data from Linear API
-export const syncLinearData = action({
-  args: {
-    projectId: v.string(),
-  },
-  handler: async (ctx, args): Promise<{ synced: number }> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const userId = identity.subject;
-
-    // Get project credentials
-    const project: any = await ctx.runQuery(internal.linear.getProjectCredentials, {
-      userId,
-      projectId: args.projectId,
-    });
-
-    if (!project) throw new Error("Project not found");
-
-    // Fetch completed issues from Linear API
-    const response: Response = await fetch("https://api.linear.app/graphql", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${project.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `
-          query GetCompletedIssues($teamId: String!, $after: DateTime) {
-            team(id: $teamId) {
-              issues(
-                filter: { 
-                  state: { type: { eq: "completed" } }
-                  completedAt: { gte: $after }
-                }
-                first: 100
-              ) {
-                nodes {
-                  id
-                  title
-                  estimate
-                  completedAt
-                  cycle {
-                    id
-                    name
-                  }
-                }
-              }
-            }
-          }
-        `,
-        variables: {
-          teamId: project.teamId,
-          after: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // Last 30 days
-        },
-      }),
-    });
-
-    const data: any = await response.json();
-    
-    if (data.errors) {
-      throw new Error(`Linear API error: ${data.errors[0].message}`);
-    }
-
-    // Store story points data
-    const issues: any[] = data.data.team.issues.nodes;
-    for (const issue of issues) {
-      if (issue.estimate && issue.completedAt) {
-        await ctx.runMutation(internal.linear.storeStoryPoints, {
-          userId,
-          projectId: args.projectId,
-          issueId: issue.id,
-          points: issue.estimate,
-          completedAt: new Date(issue.completedAt).getTime(),
-          cycleId: issue.cycle?.id,
-        });
-      }
-    }
-
-    return { synced: issues.length };
-  },
-});
-
-// Internal functions
-import { internal } from "./_generated/api";
-import { internalQuery, internalMutation } from "./_generated/server";
-
 export const getProjectCredentials = internalQuery({
   args: {
     userId: v.string(),
@@ -144,7 +60,7 @@ export const storeStoryPoints = internalMutation({
     projectId: v.string(),
     issueId: v.string(),
     points: v.number(),
-    completedAt: v.number(),
+    completedAt: v.optional(v.number()), // undefined for active issues
     cycleId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -166,6 +82,18 @@ export const getVelocityMetrics = query({
   args: {
     days: v.optional(v.number()),
   },
+  returns: v.union(
+    v.null(),
+    v.object({
+      velocityData: v.array(v.object({
+        date: v.string(),
+        points: v.number(),
+      })),
+      totalPoints: v.number(),
+      averageVelocity: v.number(),
+      currentTrend: v.number(),
+    })
+  ),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
@@ -179,15 +107,23 @@ export const getVelocityMetrics = query({
       .withIndex("by_user_and_date", (q) => 
         q.eq("userId", userId)
       )
-      .filter((q) => q.gte(q.field("completedAt"), since))
+      .filter((q) => 
+        q.and(
+          q.neq(q.field("completedAt"), undefined), // Only completed issues
+          q.gte(q.field("completedAt"), since)  // Within date range
+        )
+      )
       .collect();
 
     // Group by week
     const weeklyVelocity = new Map<string, number>();
     
     storyPoints.forEach(sp => {
-      const week = new Date(sp.completedAt).toISOString().slice(0, 10); // YYYY-MM-DD
-      weeklyVelocity.set(week, (weeklyVelocity.get(week) || 0) + sp.points);
+      // completedAt should not be null here due to our filter, but add safety check
+      if (sp.completedAt) {
+        const week = new Date(sp.completedAt).toISOString().slice(0, 10); // YYYY-MM-DD
+        weeklyVelocity.set(week, (weeklyVelocity.get(week) || 0) + sp.points);
+      }
     });
 
     const velocityData = Array.from(weeklyVelocity.entries())
@@ -207,5 +143,35 @@ export const getVelocityMetrics = query({
         ? velocityData[velocityData.length - 1].points - velocityData[velocityData.length - 2].points
         : 0,
     };
+  },
+});
+
+// Get user's connected Linear projects
+export const getConnectedProjects = query({
+  args: {},
+  returns: v.array(v.object({
+    _id: v.id("linearProjects"),
+    projectId: v.string(),
+    projectName: v.string(),
+    teamId: v.string(),
+    teamName: v.string(),
+  })),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const userId = identity.subject;
+
+    const projects = await ctx.db
+      .query("linearProjects")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return projects.map(p => ({
+      _id: p._id,
+      projectId: p.projectId,
+      projectName: p.projectName,
+      teamId: p.teamId,
+      teamName: p.teamName,
+    }));
   },
 });
