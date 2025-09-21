@@ -14,6 +14,8 @@ import { BurnoutHistoryChart } from "./components/BurnoutHistoryChart";
 import { TimeRangeFilter, TimeRange } from "./components/TimeRangeFilter";
 import { NewerWebcamMonitor } from "./components/NewerWebcamMonitor";
 import { BreakDetectionMonitor } from "./components/BreakDetectionMonitor";
+import { PDFExport } from "./components/PDFExport";
+
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "integrations" | "settings">("overview");
@@ -85,6 +87,7 @@ export function Dashboard() {
         </div>
 
         <div className="flex items-center gap-4">
+          <PDFExport />
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
           <BreakDetectionMonitor />
           <NewerWebcamMonitor />
