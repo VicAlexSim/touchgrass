@@ -30,6 +30,9 @@ export const processChunk = action({
     // });
     // console.log(`Created index: id=${index.id}`);
 
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
     const videoUrl = await ctx.storage.getUrl(args.videoStorageId);
     console.log(`Video URL: ${videoUrl}`);
 
@@ -61,14 +64,13 @@ export const processChunk = action({
         type: "json_schema",
         jsonSchema: {
           type: "object",
+          required: ["isAtDesk"],
           properties: {
             isAtDesk: {
               type: "boolean",
-              required: true,
             },
             mood: {
               type: "number",
-              required: false,
             },
           },
         },
@@ -76,6 +78,18 @@ export const processChunk = action({
     });
     console.log(`${JSON.stringify(text, null, 2)}`);
     console.log(`Finish reason: ${text.finishReason}`);
+
+    const dataJson = JSON.parse(text.data!);
+
+    await ctx.runMutation(internal.webcam.storeMoodData, {
+      userId: userId,
+      timestamp: Date.now(),
+      mood: "test",
+      moodScore: dataJson.mood!,
+      isPresent: dataJson.isAtDesk!,
+      confidence: 1,
+    });
+
     return "success";
   },
 });
