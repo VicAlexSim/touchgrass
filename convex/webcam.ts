@@ -29,8 +29,9 @@ export const processChunk = action({
     // });
     // console.log(`Created index: id=${index.id}`);
 
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     const videoUrl = await ctx.storage.getUrl(args.videoStorageId);
     console.log(`Video URL: ${videoUrl}`);
@@ -273,8 +274,9 @@ export const generateClipUploadUrl = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -286,8 +288,9 @@ export const processUploadedClip = action({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
 
     const blob = await ctx.storage.get(args.storageId);
     if (!blob) throw new Error("Uploaded clip not found");
