@@ -55,6 +55,7 @@ const applicationTables = {
       workHoursScore: v.number(),
       breakScore: v.number(),
       commitPatternsScore: v.optional(v.number()), // based on late night commits, weekend work, etc.
+      wakatimeScore: v.optional(v.number()), // based on coding time patterns and intensity
     }),
     notificationSent: v.boolean(),
   }).index("by_user_and_date", ["userId", "date"]),
@@ -82,6 +83,34 @@ const applicationTables = {
     filesChanged: v.optional(v.number()),
   }).index("by_user_and_time", ["userId", "timestamp"])
     .index("by_username", ["username"]),
+
+  // Wakatime coding time tracking
+  wakatimeSettings: defineTable({
+    userId: v.string(),
+    apiKey: v.string(), // Wakatime API key (should be encrypted in production)
+    endpoint: v.optional(v.string()), // Custom API endpoint
+    lastSync: v.optional(v.number()),
+    isActive: v.boolean(),
+    defaultRange: v.optional(v.string()), // "today", "last_7_days", "last_30_days", "all_time"
+  }).index("by_user", ["userId"]),
+
+  // Daily Wakatime coding data
+  wakatimeDailyData: defineTable({
+    userId: v.string(),
+    date: v.string(), // YYYY-MM-DD format
+    codingTime: v.number(), // in seconds
+    languages: v.optional(v.array(v.object({
+      name: v.string(),
+      time: v.number(),
+      percentage: v.number(),
+    }))),
+    projects: v.optional(v.array(v.object({
+      name: v.string(),
+      time: v.number(),
+      percentage: v.number(),
+    }))),
+    lastUpdated: v.number(),
+  }).index("by_user_and_date", ["userId", "date"]),
 };
 
 export default defineSchema({

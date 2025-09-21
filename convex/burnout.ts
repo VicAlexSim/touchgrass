@@ -28,6 +28,9 @@ export const calculateBurnoutScore = action({
     // Get commit patterns score
     const commitPatternsScore: number = await ctx.runQuery(internal.burnout.getCommitPatternsScore, { userId });
 
+    // Get Wakatime coding patterns score
+    const wakatimeScore: number = await ctx.runQuery(internal.burnout.getWakatimeScore, { userId });
+
     // Calculate weighted risk score (0-100)
     const factors = {
       velocityScore: velocityScore || 0,
@@ -35,14 +38,16 @@ export const calculateBurnoutScore = action({
       workHoursScore: workHoursScore || 0,
       breakScore: breakScore || 0,
       commitPatternsScore: commitPatternsScore || 0,
+      wakatimeScore: wakatimeScore || 0,
     };
 
     const riskScore = Math.round(
-      (factors.velocityScore * 0.20) +
-      (factors.moodScore * 0.30) +
-      (factors.workHoursScore * 0.20) +
+      (factors.velocityScore * 0.15) +
+      (factors.moodScore * 0.25) +
+      (factors.workHoursScore * 0.15) +
       (factors.breakScore * 0.10) +
-      (factors.commitPatternsScore * 0.20)
+      (factors.commitPatternsScore * 0.15) +
+      (factors.wakatimeScore * 0.20)
     );
 
     // Store the score
@@ -197,6 +202,19 @@ export const getCommitPatternsScore = internalQuery({
   },
 });
 
+export const getWakatimeScore = internalQuery({
+  args: { userId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, _args): Promise<number> => {
+    try {
+      return await ctx.runQuery(api.wakatime.calculateWakatimeRisk, {});
+    } catch (error) {
+      console.warn("Failed to calculate Wakatime risk:", error);
+      return 0; // Return 0 if Wakatime data is unavailable
+    }
+  },
+});
+
 export const storeBurnoutScore = internalMutation({
   args: {
     userId: v.string(),
@@ -208,6 +226,7 @@ export const storeBurnoutScore = internalMutation({
       workHoursScore: v.number(),
       breakScore: v.number(),
       commitPatternsScore: v.optional(v.number()),
+      wakatimeScore: v.optional(v.number()),
     }),
   },
   handler: async (ctx, args) => {

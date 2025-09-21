@@ -5,21 +5,26 @@ import { RiskScoreCard } from "./components/RiskScoreCard";
 import { VelocityChart } from "./components/VelocityChart";
 import { MoodChart } from "./components/MoodChart";
 import { WorkHoursChart } from "./components/WorkHoursChart";
+import { WakatimeChart } from "./components/WakatimeChart";
 import { WebcamMonitor } from "./components/WebcamMonitor";
 import { LinearIntegration } from "./components/LinearIntegration";
+import { WakatimeIntegration } from "./components/WakatimeIntegration";
 import { Settings } from "./components/Settings";
 import { CommitChart } from "./components/CommitChart";
 import { BurnoutHistoryChart } from "./components/BurnoutHistoryChart";
+import { TimeRangeFilter, TimeRange } from "./components/TimeRangeFilter";
 
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "integrations" | "settings">("overview");
+  const [timeRange, setTimeRange] = useState<TimeRange>(7);
   
   const currentRisk = useQuery(api.burnout.getCurrentRiskScore);
   const velocityMetrics = useQuery(api.linear.getVelocityMetrics, { days: 30 });
   const moodAnalytics = useQuery(api.webcam.getMoodAnalytics, { days: 7 });
   const workHours = useQuery(api.webcam.getWorkSessionAnalytics, { days: 7 });
   const burnoutHistory = useQuery(api.burnout.getBurnoutHistory, { days: 30 });
+  const wakatimeAnalytics = useQuery(api.wakatime.getWakatimeAnalytics, { days: timeRange });
   
   const calculateBurnout = useAction(api.burnout.calculateBurnoutScore);
 
@@ -70,8 +75,11 @@ export function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Burnout Prevention Dashboard</h1>
           <p className="text-gray-600 mt-1">Monitor your well-being and work patterns</p>
         </div>
-        
-        <WebcamMonitor />
+
+        <div className="flex items-center gap-4">
+          <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
+          <WebcamMonitor />
+        </div>
       </div>
 
       {/* Navigation Tabs */}
@@ -121,9 +129,11 @@ export function Dashboard() {
               loading={workHours === undefined}
             />
 
-            
           </div>
-          <CommitChart />
+
+          {/* Wakatime Chart */}
+          <WakatimeChart days={timeRange} />
+          <CommitChart days={timeRange} />
 
           {/* Burnout History */}
           <BurnoutHistoryChart
@@ -136,6 +146,7 @@ export function Dashboard() {
       {activeTab === "integrations" && (
         <div className="space-y-6">
           <LinearIntegration />
+          <WakatimeIntegration />
 
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">GitHub Commit Analysis</h3>

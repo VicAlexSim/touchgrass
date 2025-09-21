@@ -18,6 +18,7 @@ import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as linear from "../linear.js";
 import type * as router from "../router.js";
+import type * as wakatime from "../wakatime.js";
 import type * as webcam from "../webcam.js";
 
 /**
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   linear: typeof linear;
   router: typeof router;
+  wakatime: typeof wakatime;
   webcam: typeof webcam;
 }>;
 export declare const api: FilterApi<

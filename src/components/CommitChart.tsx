@@ -3,29 +3,54 @@ import { api } from "../../convex/_generated/api";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "./ui/chart";
+import { Button } from "./ui/button";
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, Cell } from "recharts";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { TimeRange } from "./TimeRangeFilter";
 
-export function CommitChart() {
+interface CommitChartProps {
+  days?: TimeRange;
+}
+
+export function CommitChart({ days = 30 }: CommitChartProps) {
   const { user } = useAuth0();
   const githubUsername = user?.nickname || user?.name;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const commitAnalytics = useQuery(api.github.getGitHubCommitAnalytics, { days: 365 });
+  const commitAnalytics = useQuery(api.github.getGitHubCommitAnalytics, { days });
   const fetchCommits = useAction(api.github.fetchGitHubCommits);
+
+  const handleRefresh = async () => {
+    if (!githubUsername) return;
+
+    setIsRefreshing(true);
+
+    try {
+      console.log(`Manual refresh for user: ${githubUsername} - fetching recent commits`);
+      const result = await fetchCommits({ username: githubUsername, days: Math.max(days, 60) });
+      console.log('Fetch result:', result);
+      console.log(`Fetched ${result.totalCommits} commits - data should update shortly`);
+    } catch (error) {
+      console.error('GitHub refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Fetch commits on component mount if we have a username
   useEffect(() => {
-    console.log('CommitChart effect:', { 
-      githubUsername, 
-      hasAnalytics: !!commitAnalytics, 
-      totalCommits: commitAnalytics?.totalCommits 
+    console.log('CommitChart effect:', {
+      githubUsername,
+      hasAnalytics: !!commitAnalytics,
+      totalCommits: commitAnalytics?.totalCommits
     });
-    
+
     if (githubUsername && commitAnalytics && commitAnalytics.totalCommits === 0) {
       console.log(`Fetching commits for GitHub user: ${githubUsername}`);
-      void fetchCommits({ username: githubUsername, days: 365 });
+      void fetchCommits({ username: githubUsername, days: Math.max(days, 365) });
     }
-  }, [githubUsername, fetchCommits, commitAnalytics]);
+  }, [githubUsername, fetchCommits, commitAnalytics, days]);
 
   if (!githubUsername) {
     return (
@@ -98,33 +123,22 @@ export function CommitChart() {
               {totalCommits} commits analyzed
               {Math.max(...recentCommitTrend.map(d => d.commits)) === 0 && (
                 <span className="text-orange-600 font-medium ml-2">
-                  ⚠️ No commits in last 30 days
+                  ⚠️ No commits in last {days} days
                 </span>
               )}
             </CardDescription>
           )}
         </div>
-        <button
-          onClick={() => {
-            if (githubUsername) {
-              console.log(`Manual refresh for user: ${githubUsername} - fetching recent commits`);
-              void (async () => {
-                try {
-                  console.log('Starting GitHub commit fetch for recent activity...');
-                  const result = await fetchCommits({ username: githubUsername, days: 60 });
-                  console.log('Fetch result:', result);
-                  console.log(`Fetched ${result.totalCommits} commits - data should update shortly`);
-                } catch (error) {
-                  console.error('Fetch error:', error);
-                }
-              })();
-            }
-          }}
-          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-          disabled={!githubUsername}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void handleRefresh()}
+          disabled={isRefreshing || !githubUsername}
+          className="h-6"
         >
-          Refresh Recent Data
-        </button>
+          <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </CardHeader>
       <CardContent>
 
@@ -199,7 +213,7 @@ export function CommitChart() {
 
         {/* Recent Commit Trend Chart - Full Width */}
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Recent Commit Trend (Last 30 Days)</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Recent Commit Trend (Last {days} Days)</h4>
           <ChartContainer config={chartConfig} className="h-[200px] w-full">
             <LineChart data={recentTrendData}>
               <XAxis 
@@ -224,7 +238,7 @@ export function CommitChart() {
           
           {Math.max(...recentCommitTrend.map(d => d.commits)) === 0 && (
             <p className="text-xs text-gray-500 mt-2 text-center">
-              No commits in the last 30 days. Consider checking your repository activity.
+              No commits in the last {days} days. Consider checking your repository activity.
             </p>
           )}
         </div>
