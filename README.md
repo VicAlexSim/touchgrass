@@ -1,6 +1,8 @@
-# TouchGrass - AI-Powered Burnout Prevention Platform
+# TouchGrass - AI-Powered Burnout Prevention Platform - https://touchgrass-phi.vercel.app/
 
 > **🏆 TwelveLabs Challenge Submission** - Advanced video analysis for developer wellbeing
+> **🏆 Warp.dev 1st place** - Warp Best Developer Tool
+> **🏆 TwelveLabs 2nd place** - Build The Future of Video Understanding with TwelveLabs
 
 TouchGrass is a production-ready burnout prevention platform that leverages AI-powered video analysis, multi-source data integration, and real-time monitoring to proactively protect developer mental health. Built with enterprise-grade architecture and scalable design patterns.
 
