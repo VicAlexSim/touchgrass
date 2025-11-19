@@ -1,6 +1,7 @@
 import { mutation, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { faker } from '@faker-js/faker';
+import { api } from "./_generated/api";
 
 // Internal handler for generating burnout data
 async function generateMockBurnoutHistoryHandler(ctx: any, args: { userId: string; days?: number }) {
@@ -403,5 +404,306 @@ export const insertWorkSession = mutation({
   },
   handler: async (ctx, args) => {
     return await insertWorkSessionHandler(ctx, args);
+  },
+});
+// ============================================
+// LINEAR MOCK DATA GENERATORS
+// ============================================
+
+// Internal handler for generating Linear story points data
+async function generateMockLinearDataHandler(ctx: any, args: { userId: string; days?: number }) {
+  const { userId, days = 30 } = args;
+  
+  faker.seed();
+  
+  const storyPointsData = [];
+  const today = new Date();
+  const projectId = faker.string.uuid(); // Use same project for consistency
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const timestamp = date.getTime();
+
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // Generate realistic number of issues completed per day
+    const issuesCompleted = isWeekend ? 
+      faker.number.int({ min: 0, max: 2 }) : 
+      faker.number.int({ min: 1, max: 5 });
+
+    // Create individual story point entries for each issue
+    for (let j = 0; j < issuesCompleted; j++) {
+      storyPointsData.push({
+        userId,
+        projectId,
+        issueId: faker.string.uuid(),
+        points: faker.number.int({ min: 1, max: 8 }), // Story points per issue
+        completedAt: timestamp,
+        sprintId: faker.string.uuid(),
+      });
+    }
+  }
+
+  return storyPointsData;
+}
+
+// Generate mock Linear story points data
+export const generateMockLinearData = action({
+  args: {
+    userId: v.string(),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await generateMockLinearDataHandler(ctx, args);
+  },
+});
+
+// ============================================
+// WAKATIME MOCK DATA GENERATORS
+// ============================================
+
+// Internal handler for generating Wakatime coding data
+async function generateMockWakatimeDataHandler(ctx: any, args: { userId: string; days?: number }) {
+  const { userId, days = 30 } = args;
+  
+  faker.seed();
+  
+  const wakatimeData = [];
+  const today = new Date();
+
+  // Popular programming languages and their typical usage patterns
+  const languages = [
+    { name: 'TypeScript', weight: 35 },
+    { name: 'JavaScript', weight: 25 },
+    { name: 'Python', weight: 15 },
+    { name: 'HTML', weight: 10 },
+    { name: 'CSS', weight: 8 },
+    { name: 'JSON', weight: 5 },
+    { name: 'Markdown', weight: 2 },
+  ];
+
+  const projects = [
+    'touchgrass',
+    'api-backend',
+    'mobile-app',
+    'dashboard',
+    'documentation',
+  ];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateString = date.toISOString().slice(0, 10);
+
+    const dayOfWeek = date.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // Generate realistic coding time (0-10 hours per day)
+    const codingTime = isWeekend ? 
+      faker.number.int({ min: 0, max: 14400 }) : // 0-4 hours on weekends
+      faker.number.int({ min: 10800, max: 36000 }); // 3-10 hours on weekdays
+
+    if (codingTime > 0) {
+      // Generate language breakdown
+      const languageBreakdown: Array<{ name: string; time: number; percentage: number }> = [];
+      let remainingTime = codingTime;
+
+      languages.forEach((lang, index) => {
+        const isLast = index === languages.length - 1;
+        const time = isLast ? 
+          remainingTime : 
+          Math.floor((codingTime * lang.weight) / 100) + faker.number.int({ min: -300, max: 300 });
+        
+        if (time > 0) {
+          languageBreakdown.push({
+            name: lang.name,
+            time: Math.max(0, time),
+            percentage: parseFloat(((time / codingTime) * 100).toFixed(2)),
+          });
+          remainingTime -= time;
+        }
+      });
+
+      // Generate project breakdown
+      const projectBreakdown: Array<{ name: string; time: number; percentage: number }> = [];
+      remainingTime = codingTime;
+
+      projects.forEach((project, index) => {
+        const isLast = index === projects.length - 1;
+        const projectWeight = faker.number.int({ min: 10, max: 40 });
+        const time = isLast ? 
+          remainingTime : 
+          Math.floor((codingTime * projectWeight) / 100);
+        
+        if (time > 0 && projectBreakdown.length < 3) { // Limit to 3 projects per day
+          projectBreakdown.push({
+            name: project,
+            time: Math.max(0, time),
+            percentage: parseFloat(((time / codingTime) * 100).toFixed(2)),
+          });
+          remainingTime -= time;
+        }
+      });
+
+      wakatimeData.push({
+        userId,
+        date: dateString,
+        codingTime,
+        languages: languageBreakdown,
+        projects: projectBreakdown,
+        lastUpdated: date.getTime(),
+      });
+    }
+  }
+
+  return wakatimeData;
+}
+
+// Generate mock Wakatime coding data
+export const generateMockWakatimeData = action({
+  args: {
+    userId: v.string(),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await generateMockWakatimeDataHandler(ctx, args);
+  },
+});
+
+// ============================================
+// SEED ALL DATA INCLUDING INTEGRATIONS
+// ============================================
+
+// Internal mutation to insert Linear data
+export const insertLinearStoryPoints = mutation({
+  args: {
+    userId: v.string(),
+    projectId: v.string(),
+    issueId: v.string(),
+    points: v.number(),
+    completedAt: v.optional(v.number()),
+    sprintId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('storyPoints', args);
+  },
+});
+
+// Internal mutation to insert Wakatime data
+export const insertWakatimeData = mutation({
+  args: {
+    userId: v.string(),
+    date: v.string(),
+    codingTime: v.number(),
+    languages: v.optional(v.array(v.object({
+      name: v.string(),
+      time: v.number(),
+      percentage: v.number(),
+    }))),
+    projects: v.optional(v.array(v.object({
+      name: v.string(),
+      time: v.number(),
+      percentage: v.number(),
+    }))),
+    lastUpdated: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert('wakatimeDailyData', args);
+  },
+});
+
+// Internal mutation to create Wakatime settings
+export const createWakatimeSettings = mutation({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if settings already exist
+    const existing = await ctx.db
+      .query('wakatimeSettings')
+      .withIndex('by_user', (q) => q.eq('userId', args.userId))
+      .first();
+    
+    if (existing) {
+      // Update to active
+      await ctx.db.patch(existing._id, { isActive: true, lastSync: Date.now() });
+      return existing._id;
+    }
+    
+    // Create new settings
+    return await ctx.db.insert('wakatimeSettings', {
+      userId: args.userId,
+      apiKey: 'mock-api-key',
+      isActive: true,
+      lastSync: Date.now(),
+    });
+  },
+});
+
+// Seed all mock data including Linear and Wakatime
+export const seedAllMockDataWithIntegrations = action({
+  args: {
+    userId: v.string(),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, days = 30 } = args;
+
+    console.log(`🌱 Generating complete mock data for user ${userId} for ${days} days...`);
+
+    // Generate all mock data
+    const burnoutData = await generateMockBurnoutHistoryHandler(ctx, { userId, days });
+    const breakData = await generateMockBreakDataHandler(ctx, { userId, days });
+    const workSessions = await generateMockWorkSessionsHandler(ctx, { userId, days });
+    const linearData = await generateMockLinearDataHandler(ctx, { userId, days });
+    const wakatimeData = await generateMockWakatimeDataHandler(ctx, { userId, days });
+
+    // Insert burnout scores
+    for (const burnout of burnoutData) {
+      await ctx.runMutation(api.mockData.insertBurnoutScore, burnout);
+    }
+
+    // Insert breaks
+    for (const breakItem of breakData) {
+      await ctx.runMutation(api.mockData.insertBreak, breakItem);
+    }
+
+    // Insert work sessions
+    for (const session of workSessions) {
+      await ctx.runMutation(api.mockData.insertWorkSession, session);
+    }
+
+    // Insert Linear story points
+    for (const linear of linearData) {
+      await ctx.runMutation(api.mockData.insertLinearStoryPoints, linear);
+    }
+
+    // Create Wakatime settings (so data shows up in UI)
+    await ctx.runMutation(api.mockData.createWakatimeSettings, { userId });
+
+    // Insert Wakatime data
+    for (const wakatime of wakatimeData) {
+      await ctx.runMutation(api.mockData.insertWakatimeData, wakatime);
+    }
+
+    console.log(`✅ Complete mock data seeded successfully:
+    - ${burnoutData.length} burnout scores
+    - ${breakData.length} break records
+    - ${workSessions.length} work sessions
+    - ${linearData.length} Linear story points
+    - ${wakatimeData.length} Wakatime coding sessions`);
+
+    return {
+      success: true,
+      counts: {
+        burnout: burnoutData.length,
+        breaks: breakData.length,
+        sessions: workSessions.length,
+        linear: linearData.length,
+        wakatime: wakatimeData.length,
+      },
+    };
   },
 });

@@ -82,109 +82,155 @@ export function PDFExport({ className = "" }: PDFExportProps) {
       doc.roundedRect(x, y, width, height, 4, 4, 'S');
       
       // Title background
-      doc.setFillColor(59, 130, 246); // Blue-500
-      doc.roundedRect(x, y, width, 6, 4, 4, 'F');
+      doc.setFillColor(75, 85, 99); // Dark gray
+      doc.roundedRect(x, y, width, 5, 3, 3, 'F');
       
       // Title
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255); // White
-      const titleLines = doc.splitTextToSize(title, width - 6);
-      doc.text(titleLines, x + 3, y + 4.5);
+      const titleLines = doc.splitTextToSize(title, width - 4);
+      doc.text(titleLines, x + 2, y + 3.5);
       
       // Value
-      doc.setFontSize(16);
+      doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(17, 24, 39); // Gray-900
-      const valueLines = doc.splitTextToSize(value, width - 6);
-      doc.text(valueLines, x + 3, y + 18);
+      doc.setTextColor(31, 41, 55); // Dark gray
+      const valueLines = doc.splitTextToSize(value, width - 4);
+      doc.text(valueLines, x + 2, y + 14);
     };
 
     try {
-      // Header
-      doc.setFontSize(24);
+      // Professional Header with Logo Area
+      doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(16, 185, 129); // Green-500
-      addText('TouchGrass', 20, yPosition);
-      
-      yPosition += 10;
-      doc.setFontSize(18);
-      doc.setTextColor(107, 114, 128); // Gray-500
-      addText('Burnout Prevention Report', 20, yPosition);
+      doc.setTextColor(31, 41, 55); // Dark Gray
+      addText('OCCUPATIONAL HEALTH ASSESSMENT', 20, yPosition);
       
       yPosition += 8;
-      doc.setFontSize(10);
-      doc.setTextColor(156, 163, 175); // Gray-400
-      addText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, yPosition);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(75, 85, 99);
+      addText('Burnout Risk Evaluation Report', 20, yPosition);
       
-      yPosition += 15;
-
-      // Add main content divider
-      doc.setLineWidth(1);
-      doc.setDrawColor(229, 231, 235); // Gray-200
-      doc.line(20, yPosition, pageWidth - 20, yPosition);
+      yPosition += 12;
+      doc.setFontSize(9);
+      doc.setTextColor(107, 114, 128);
+      addText(`Report Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 20, yPosition);
+      yPosition += 4;
+      addText(`Time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`, 20, yPosition);
+      yPosition += 4;
+      addText('Assessment Period: 30 Days', 20, yPosition);
+      
       yPosition += 10;
 
+      // Professional divider
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(156, 163, 175);
+      doc.line(20, yPosition, pageWidth - 20, yPosition);
+      yPosition += 12;
+
+      // Executive Summary Box
+      doc.setFillColor(249, 250, 251);
+      doc.rect(20, yPosition, pageWidth - 40, 25, 'F');
+      doc.setDrawColor(209, 213, 219);
+      doc.setLineWidth(0.5);
+      doc.rect(20, yPosition, pageWidth - 40, 25, 'S');
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(31, 41, 55);
+      addText('EXECUTIVE SUMMARY', 25, yPosition + 6);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(75, 85, 99);
+      addText('This report provides a comprehensive assessment of occupational stress indicators', 25, yPosition + 12);
+      addText('and burnout risk factors based on continuous monitoring and data analysis.', 25, yPosition + 17);
+      
+      yPosition += 32;
+
       // Current Risk Score Section
-      yPosition = addSectionHeader('Current Burnout Risk', yPosition);
+      yPosition = addSectionHeader('I. BURNOUT RISK ASSESSMENT', yPosition);
       
       if (currentRisk) {
-        // Check if we need a new page for risk section
         if (yPosition > pageHeight - 80) {
           doc.addPage();
           yPosition = 20;
         }
         
-        // Risk score display in a box
-        const riskColor = formatRiskLevel(currentRisk.riskScore).color;
-        const riskRgb = riskColor === '#dc2626' ? [220, 38, 38] : riskColor === '#f59e0b' ? [245, 158, 11] : [16, 185, 129];
+        const riskLevel = formatRiskLevel(currentRisk.riskScore);
         
-        // Draw risk score box
-        doc.setLineWidth(2);
-        doc.setDrawColor(riskRgb[0], riskRgb[1], riskRgb[2]);
-        doc.roundedRect(20, yPosition, 70, 30, 4, 4, 'S');
+        // Professional risk assessment box
+        doc.setFillColor(255, 255, 255);
+        doc.rect(20, yPosition, pageWidth - 40, 45, 'F');
+        doc.setDrawColor(209, 213, 219);
+        doc.setLineWidth(0.5);
+        doc.rect(20, yPosition, pageWidth - 40, 45, 'S');
         
-        // Risk score background
-        doc.setFillColor(riskRgb[0] + 30, riskRgb[1] + 30, riskRgb[2] + 30);
-        doc.roundedRect(20, yPosition, 70, 30, 4, 4, 'F');
-        
-        // Risk score percentage
-        doc.setFontSize(24);
+        // Risk Score - Left side
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(riskRgb[0], riskRgb[1], riskRgb[2]);
-        addText(`${currentRisk.riskScore}%`, 25, yPosition + 12);
+        doc.setTextColor(75, 85, 99);
+        addText('Overall Risk Score:', 25, yPosition + 8);
         
-        // Risk level
-        doc.setFontSize(12);
+        doc.setFontSize(32);
         doc.setFont('helvetica', 'bold');
-        addText(`${formatRiskLevel(currentRisk.riskScore).level} Risk`, 25, yPosition + 22);
+        doc.setTextColor(31, 41, 55);
+        addText(`${currentRisk.riskScore}%`, 25, yPosition + 22);
         
-        // Risk factors on the right side - aligned with the box
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(55, 65, 81);
-        addText('Risk Factors Breakdown:', 100, yPosition + 2);
+        const levelColor = riskLevel.level === 'High' ? [220, 38, 38] : riskLevel.level === 'Medium' ? [217, 119, 6] : [22, 163, 74];
+        doc.setTextColor(levelColor[0], levelColor[1], levelColor[2]);
+        addText(`${riskLevel.level.toUpperCase()} RISK`, 25, yPosition + 30);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(107, 114, 128);
+        addText('Classification based on composite', 25, yPosition + 36);
+        addText('stress indicators', 25, yPosition + 40);
+        
+        // Risk Factors Table - Right side
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(75, 85, 99);
+        addText('Contributing Factors:', 95, yPosition + 8);
         
         const factors = [
-          `Velocity: ${currentRisk.factors?.velocityScore || 0}%`,
-          `Mood: ${currentRisk.factors?.moodScore || 0}%`,
-          `Work Hours: ${currentRisk.factors?.workHoursScore || 0}%`,
-          `Breaks: ${currentRisk.factors?.breakScore || 0}%`
+          { name: 'Work Velocity', score: currentRisk.factors?.velocityScore || 0 },
+          { name: 'Emotional State', score: currentRisk.factors?.moodScore || 0 },
+          { name: 'Work Duration', score: currentRisk.factors?.workHoursScore || 0 },
+          { name: 'Rest Intervals', score: currentRisk.factors?.breakScore || 0 }
         ];
         
         if (currentRisk.factors?.commitPatternsScore) {
-          factors.push(`Commit Patterns: ${currentRisk.factors.commitPatternsScore}%`);
+          factors.push({ name: 'Activity Patterns', score: currentRisk.factors.commitPatternsScore });
         }
         
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        let factorY = yPosition + 8;
+        let factorY = yPosition + 14;
         factors.forEach(factor => {
-          addText(factor, 100, factorY);
-          factorY += 5;
+          doc.setTextColor(75, 85, 99);
+          addText(`${factor.name}:`, 95, factorY);
+          
+          // Score bar
+          const barWidth = 40;
+          const fillWidth = (factor.score / 100) * barWidth;
+          doc.setFillColor(229, 231, 235);
+          doc.rect(140, factorY - 3, barWidth, 4, 'F');
+          
+          const barColor = factor.score >= 70 ? [220, 38, 38] : factor.score >= 50 ? [217, 119, 6] : [22, 163, 74];
+          doc.setFillColor(barColor[0], barColor[1], barColor[2]);
+          doc.rect(140, factorY - 3, fillWidth, 4, 'F');
+          
+          doc.setTextColor(31, 41, 55);
+          addText(`${factor.score}%`, 183, factorY);
+          factorY += 6;
         });
         
-        yPosition += 40;
+        yPosition += 52;
       } else {
         doc.setFontSize(12);
         doc.setTextColor(107, 114, 128);
@@ -202,13 +248,13 @@ export function PDFExport({ className = "" }: PDFExportProps) {
 
       // Additional Data Sections
       if (velocityMetrics) {
-        // Check if we need a new page for this section
-        if (yPosition > pageHeight - 100) {
+        // Check if we need a new page for this section (header + boxes need ~45mm)
+        if (yPosition > pageHeight - 50) {
           doc.addPage();
           yPosition = 20;
         }
         
-        yPosition = addSectionHeader('Linear Velocity Metrics', yPosition);
+        yPosition = addSectionHeader('II. PRODUCTIVITY METRICS', yPosition);
         
         const metrics = [
           { title: 'Total Points', value: `${velocityMetrics.totalPoints || 0}` },
@@ -216,24 +262,21 @@ export function PDFExport({ className = "" }: PDFExportProps) {
           { title: 'Current Trend', value: `${(velocityMetrics.currentTrend || 0) >= 0 ? '+' : ''}${(velocityMetrics.currentTrend || 0).toFixed(1)}` }
         ];
         
-        // Check if we have enough space for 3 boxes
-        if (yPosition > pageHeight - 80) {
-          doc.addPage();
-          yPosition = 20;
-        }
+        // Don't add extra page break - section header already checked
         
-        // Calculate box positions to fit within page width
-        const boxWidth = 55;
-        const boxSpacing = 10;
+        // Calculate box positions to fit within page width - smaller boxes
+        const boxWidth = 45;
+        const boxHeight = 22;
+        const boxSpacing = 8;
         const totalWidth = (boxWidth * 3) + (boxSpacing * 2);
         const startX = (pageWidth - totalWidth) / 2;
         
         metrics.forEach((metric, index) => {
           const x = startX + index * (boxWidth + boxSpacing);
-          addDataBox(metric.title, metric.value, x, yPosition, boxWidth, 30);
+          addDataBox(metric.title, metric.value, x, yPosition, boxWidth, boxHeight);
         });
         
-        yPosition += 40;
+        yPosition += 30;
       }
 
       // Add section divider
@@ -245,13 +288,13 @@ export function PDFExport({ className = "" }: PDFExportProps) {
       }
 
       if (workHours) {
-        // Check if we need a new page for this section
-        if (yPosition > pageHeight - 100) {
+        // Check if we need a new page for this section (header + boxes need ~45mm)
+        if (yPosition > pageHeight - 50) {
           doc.addPage();
           yPosition = 20;
         }
         
-        yPosition = addSectionHeader('Work Session Analytics', yPosition);
+        yPosition = addSectionHeader('III. WORK PATTERN ANALYSIS', yPosition);
         
         const workMetrics = [
           { title: 'Total Hours', value: `${workHours.totalHours || 0}h` },
@@ -259,24 +302,21 @@ export function PDFExport({ className = "" }: PDFExportProps) {
           { title: 'Active Sessions', value: `${workHours.activeSessions || 0}` }
         ];
         
-        // Check if we have enough space for 3 boxes
-        if (yPosition > pageHeight - 80) {
-          doc.addPage();
-          yPosition = 20;
-        }
+        // Don't add extra page break - section header already checked
         
-        // Calculate box positions to fit within page width
-        const boxWidth = 55;
-        const boxSpacing = 10;
+        // Calculate box positions to fit within page width - smaller boxes
+        const boxWidth = 45;
+        const boxHeight = 22;
+        const boxSpacing = 8;
         const totalWidth = (boxWidth * 3) + (boxSpacing * 2);
         const startX = (pageWidth - totalWidth) / 2;
         
         workMetrics.forEach((metric, index) => {
           const x = startX + index * (boxWidth + boxSpacing);
-          addDataBox(metric.title, metric.value, x, yPosition, boxWidth, 30);
+          addDataBox(metric.title, metric.value, x, yPosition, boxWidth, boxHeight);
         });
         
-        yPosition += 40;
+        yPosition += 30;
       }
 
       // Add section divider
@@ -294,23 +334,42 @@ export function PDFExport({ className = "" }: PDFExportProps) {
           yPosition = 20;
         }
         
-        yPosition = addSectionHeader('Mood Analytics', yPosition);
+        yPosition = addSectionHeader('IV. PSYCHOLOGICAL INDICATORS', yPosition);
         
-        doc.setFontSize(10);
+        // Professional table-like layout
+        doc.setFillColor(255, 255, 255);
+        doc.rect(20, yPosition, pageWidth - 40, 35, 'F');
+        doc.setDrawColor(209, 213, 219);
+        doc.setLineWidth(0.5);
+        doc.rect(20, yPosition, pageWidth - 40, 35, 'S');
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(75, 85, 99);
+        addText('Monitoring Summary:', 25, yPosition + 8);
+        
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(55, 65, 81);
-        addText(`Total Data Points: ${moodAnalytics.totalDataPoints || 0}`, 20, yPosition);
-        yPosition += 8;
+        doc.setTextColor(31, 41, 55);
         
-        if (moodAnalytics.currentMood) {
-          addText(`Latest Mood: ${moodAnalytics.currentMood.mood} (${moodAnalytics.currentMood.moodScore}%)`, 20, yPosition);
-          yPosition += 6;
-          addText(`Confidence: ${((moodAnalytics.currentMood.confidence || 0) * 100).toFixed(1)}%`, 20, yPosition);
+        // Data points
+        addText(`Total Observations: ${moodAnalytics.totalDataPoints || 0}`, 25, yPosition + 15);
+        
+        // Latest mood with proper handling
+        if (moodAnalytics.currentMood && moodAnalytics.currentMood.mood && moodAnalytics.currentMood.mood !== 'undefined') {
+          const mood = moodAnalytics.currentMood.mood;
+          const moodScore = moodAnalytics.currentMood.moodScore || 0;
+          const confidence = ((moodAnalytics.currentMood.confidence || 0) * 100).toFixed(1);
+          
+          addText(`Current State: ${mood.charAt(0).toUpperCase() + mood.slice(1)} (Score: ${moodScore}%)`, 25, yPosition + 21);
+          addText(`Assessment Confidence: ${confidence}%`, 25, yPosition + 27);
         } else {
-          addText('No recent mood data available', 20, yPosition);
+          doc.setTextColor(107, 114, 128);
+          addText('Current State: Insufficient data for assessment', 25, yPosition + 21);
+          addText('Note: Webcam monitoring required for mood analysis', 25, yPosition + 27);
         }
         
-        yPosition += 15;
+        yPosition += 42;
       }
 
       // Add section divider
@@ -383,10 +442,10 @@ export function PDFExport({ className = "" }: PDFExportProps) {
         { title: 'Export Reports', desc: 'Generate PDF reports for managers and health professionals' }
       ];
       
-      // Layout features in 2x2 grid with proper spacing
-      const boxWidth = 80;
-      const boxHeight = 35;
-      const spacing = 15;
+      // Layout features in 2x2 grid with proper spacing - larger boxes
+      const boxWidth = 85;
+      const boxHeight = 40;
+      const spacing = 10;
       const startX = 20;
       
       // Calculate total height needed for all features
@@ -405,28 +464,28 @@ export function PDFExport({ className = "" }: PDFExportProps) {
         const x = startX + col * (boxWidth + spacing);
         const y = yPosition + row * (boxHeight + spacing);
         
-        // Feature box border
-        doc.setLineWidth(0.8);
-        doc.setDrawColor(59, 130, 246); // Blue-500
-        doc.roundedRect(x, y, boxWidth, boxHeight, 4, 4, 'S');
-        
         // Feature box background
-        doc.setFillColor(239, 246, 255); // Blue-50
-        doc.roundedRect(x, y, boxWidth, boxHeight, 4, 4, 'F');
+        doc.setFillColor(249, 250, 251); // Light gray
+        doc.roundedRect(x, y, boxWidth, boxHeight, 3, 3, 'F');
+        
+        // Feature box border
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(209, 213, 219); // Gray border
+        doc.roundedRect(x, y, boxWidth, boxHeight, 3, 3, 'S');
         
         // Feature title
-        doc.setFontSize(10);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 64, 175); // Blue-800
+        doc.setTextColor(31, 41, 55); // Dark gray
         const titleLines = doc.splitTextToSize(feature.title, boxWidth - 12);
         doc.text(titleLines, x + 6, y + 10);
         
         // Feature description - wrap text properly
-        doc.setFontSize(7);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(30, 64, 175); // Blue-800
+        doc.setTextColor(75, 85, 99); // Medium gray
         const descLines = doc.splitTextToSize(feature.desc, boxWidth - 12);
-        doc.text(descLines, x + 6, y + 20);
+        doc.text(descLines, x + 6, y + 19);
       });
       
       yPosition += totalHeight + 10;
