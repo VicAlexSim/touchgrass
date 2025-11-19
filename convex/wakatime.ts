@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, action, internalMutation } from "./_generated/server";
+import { query, action, mutation, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 
 export interface WakatimeHeartbeat {
@@ -634,5 +634,30 @@ export const calculateWakatimeRisk = query({
         }
 
         return Math.min(100, Math.max(0, riskScore));
+    },
+});
+
+// Disconnect Wakatime integration (remove API token only)
+export const disconnectWakatime = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Not authenticated");
+        const userId = identity.subject;
+
+        // Delete Wakatime settings (removes API token)
+        const settings = await ctx.db
+            .query("wakatimeSettings")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect();
+
+        for (const setting of settings) {
+            await ctx.db.delete(setting._id);
+        }
+
+        // Keep daily coding data for historical reference
+        // Only remove the connection (API token)
+
+        return { success: true, deletedSettings: settings.length };
     },
 });

@@ -46,22 +46,22 @@ function Content() {
       </Authenticated>
 
       <Unauthenticated>
-        <div className="flex flex-col items-center justify-center min-h-[500px] text-center">
-          <div className="mb-8">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] text-center px-4">
+          <div className="mb-8 max-w-2xl mx-auto">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               Prevent Developer Burnout
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl">
+            <p className="text-xl text-gray-600">
               TouchGrass monitors your work patterns, mood, and velocity to help you
               maintain a healthy work-life balance and avoid burnout.
             </p>
           </div>
 
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md mx-auto mb-12">
             <SignInForm />
           </div>
 
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 📊

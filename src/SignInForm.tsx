@@ -37,11 +37,11 @@ export function SignInForm() {
         {isLoading ? "Signing in..." : "Sign in with Auth0"}
       </button>
 
-      <div className="text-center text-sm text-secondary">
+      <div className="flex justify-center items-center text-sm text-gray-600">
         <span>Don't have an account? </span>
         <button
           type="button"
-          className="text-primary hover:text-primary-hover hover:underline font-medium cursor-pointer"
+          className="ml-1 text-green-600 hover:text-green-700 hover:underline font-medium cursor-pointer"
           onClick={handleSignUp}
           disabled={isLoading}
         >

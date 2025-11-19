@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as breaks from "../breaks.js";
 import type * as burnout from "../burnout.js";
+import type * as clearOldBurnoutScores from "../clearOldBurnoutScores.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as linear from "../linear.js";
@@ -37,6 +38,7 @@ import type * as webcamActions from "../webcamActions.js";
 declare const fullApi: ApiFromModules<{
   breaks: typeof breaks;
   burnout: typeof burnout;
+  clearOldBurnoutScores: typeof clearOldBurnoutScores;
   github: typeof github;
   http: typeof http;
   linear: typeof linear;

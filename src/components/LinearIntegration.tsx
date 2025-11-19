@@ -12,6 +12,7 @@ export function LinearIntegration() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const connectProject = useMutation(api.linear.connectLinearProject);
+  const disconnectLinear = useMutation(api.linear.disconnectLinear);
   const syncData = useAction(api.linearActions.syncLinearData);
   const getLinearTeams = useAction(api.linearActions.getLinearTeams);
   const velocityMetrics = useQuery(api.linear.getVelocityMetrics, {});
@@ -121,6 +122,20 @@ export function LinearIntegration() {
     }
   };
 
+  const handleDisconnect = async () => {
+    if (!confirm("Are you sure you want to disconnect Linear? This will remove your API token so you can connect a different account. Your existing story points data will be kept for reference.")) {
+      return;
+    }
+
+    try {
+      await disconnectLinear();
+      alert("Linear integration disconnected! You can now connect a different account.");
+    } catch (error) {
+      console.error("Error disconnecting Linear:", error);
+      alert("Failed to disconnect Linear. Please try again.");
+    }
+  };
+
   const selectedTeam = teamsData?.teams.find((t: any) => t.id === selectedTeamId);
   const availableProjects = selectedTeam?.projects || [];
 
@@ -138,11 +153,11 @@ export function LinearIntegration() {
           {velocityMetrics && velocityMetrics.velocityData.length > 0 ? (
             <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{velocityMetrics.totalPoints}</div>
+                <div className="text-2xl font-bold text-blue-600">{velocityMetrics.totalPoints}</div>
                 <div className="text-sm text-gray-600">Total Points</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{velocityMetrics.averageVelocity.toFixed(1)}</div>
+                <div className="text-2xl font-bold text-green-600">{velocityMetrics.averageVelocity.toFixed(1)}</div>
                 <div className="text-sm text-gray-600">Avg Velocity</div>
               </div>
               <div className="text-center">
@@ -163,13 +178,21 @@ export function LinearIntegration() {
             <div className="text-sm text-gray-600">
               Connected: {connectedProjects?.map(p => p.projectName).join(", ")}
             </div>
-            <button
-              onClick={() => void handleSync()}
-              disabled={isSyncing || !connectedProjects || connectedProjects.length === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSyncing ? "Syncing..." : "Sync Latest Data"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => void handleSync()}
+                disabled={isSyncing || !connectedProjects || connectedProjects.length === 0}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSyncing ? "Syncing..." : "Sync Latest Data"}
+              </button>
+              <button
+                onClick={() => void handleDisconnect()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+              >
+                Disconnect
+              </button>
+            </div>
           </div>
         </div>
       ) : (
@@ -242,15 +265,15 @@ export function LinearIntegration() {
 
           {/* Add team discovery button and user info */}
           {!teamsData && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700 mb-2">
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-700 mb-2">
                 Click "Fetch Teams" to automatically load your Linear teams and projects.
               </p>
               <button
                 type="button"
                 onClick={() => void handleFetchTeams()}
                 disabled={!accessToken.trim() || isLoadingTeams}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+                className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 disabled:opacity-50"
               >
                 {isLoadingTeams ? "Loading..." : "Fetch Teams"}
               </button>
@@ -280,7 +303,7 @@ export function LinearIntegration() {
           <button
             type="submit"
             disabled={isConnecting || !selectedTeamId || !teamsData || (availableProjects.length > 0 && !selectedProjectId)}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isConnecting ? "Connecting..." : "Connect Linear"}
           </button>

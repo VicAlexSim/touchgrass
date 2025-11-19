@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Clock, Code, Calendar, TrendingUp, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
+import { Clock, Code, Calendar, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
 
 export function WakatimeIntegration() {
   const [apiKey, setApiKey] = useState("");
@@ -26,6 +26,7 @@ export function WakatimeIntegration() {
   const wakatimeAnalytics = useQuery(api.wakatime.getWakatimeAnalytics, { days: 7 });
   const wakatimeSettings = useQuery(api.wakatime.getWakatimeSettings);
   const fetchWakatimeData = useAction(api.wakatime.fetchWakatimeData);
+  const disconnectWakatime = useMutation(api.wakatime.disconnectWakatime);
 
   const handleConnect = async () => {
     if (!apiKey.trim()) {
@@ -111,6 +112,21 @@ export function WakatimeIntegration() {
     }
   };
 
+  const handleDisconnect = async () => {
+    if (!confirm("Are you sure you want to disconnect Wakatime? This will remove your API key so you can connect a different account. Your existing coding time data will be kept for reference.")) {
+      return;
+    }
+
+    try {
+      await disconnectWakatime();
+      setRefreshSuccess("Wakatime integration disconnected! You can now connect a different account.");
+      setError(null);
+    } catch (error) {
+      console.error("Error disconnecting Wakatime:", error);
+      setError("Failed to disconnect Wakatime. Please try again.");
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -121,13 +137,7 @@ export function WakatimeIntegration() {
     return `${minutes}m`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
+  
   if (wakatimeAnalytics?.isConnected) {
     return (
       <div className="space-y-6">
@@ -150,6 +160,14 @@ export function WakatimeIntegration() {
                 >
                   <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
                   {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => void handleDisconnect()}
+                  className="h-7"
+                >
+                  Disconnect
                 </Button>
               </div>
             </CardTitle>

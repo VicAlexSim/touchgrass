@@ -175,3 +175,28 @@ export const getConnectedProjects = query({
     }));
   },
 });
+
+// Disconnect Linear integration (remove API token only)
+export const disconnectLinear = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.subject;
+
+    // Delete all Linear projects for this user (removes API tokens)
+    const projects = await ctx.db
+      .query("linearProjects")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const project of projects) {
+      await ctx.db.delete(project._id);
+    }
+
+    // Keep story points data for historical reference
+    // Only remove the connection (API token)
+
+    return { success: true, deletedProjects: projects.length };
+  },
+});
